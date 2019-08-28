@@ -1,0 +1,9 @@
+Uniforms for Cabrini $SEASON sports will be distributed at Cabrini Open House $UNIDATETIME at 3022 Oregon.  
+Fees for $SEASON sports ($SPORTSLIST) and prior fees are also now due. Please pay your outstanding balance of $BALANCE for Cabrini sports. 
+
+$SUSTRING
+$CURRENT_CHARGES
+$CURRENT_PAYMENTS
+$FEEPAYDETAIL
+Fees currently owed: $BALANCE
+$UNIDETAIL

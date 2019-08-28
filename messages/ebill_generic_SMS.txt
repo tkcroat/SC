@@ -1,0 +1,11 @@
+Please pay your sports fees of $BALANCE to your Cabrini team's coach (Cabrini teams only) or 
+mail/deliver to school office at: Cabrini Sponsors Club, 3022 Oregon, St. Louis, MO 63118
+Fees are $30 per player per sport except track/T-ball which are $10; $75 family max per season. \n
+Check to "Cabrini Sponsors Club" (preferred) or cash.  
+ 
+$SUSTRING
+$CURRENT_CHARGES
+$CURRENT_PAYMENTS
+$FEEPAYDETAIL
+Fees currently owed: $BALANCE
+$UNIDETAIL

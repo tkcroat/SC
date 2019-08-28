@@ -1,0 +1,8 @@
+The game schedule for the $SCHOOL $GRADERANGE $GENDER $SPORT team coached by $COACH is listed below 
+along with street addresses for each location.  Exact game start times are listed so please arrive early for warmups.  
+Also please notify your team's coach if you are unable to make it to any of the games.
+
+$SCHEDULE
+
+Addresses for your team's games are:
+$FIELDTABLE

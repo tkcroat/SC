@@ -1,0 +1,26 @@
+From: Cabrini Sponsors Club <sfcasponsorsclub@gmail.com>
+To: $RECIPIENTSTR  
+Subject: $EMAILTITLE
+Fees for Cabrini-Soulard spring sports (bat/ball and track) are now due.  If you've been transferred to another school's team 
+fees are due to Cabrini and not the transfer school.  Below balance includes unpaid fees from basketball season.
+Please pay your outstanding balance of $BALANCE for Cabrini sports 
+($30 per player per sport except track/T-ball which are $10; $75 family max per season). \n
+
+$SUSTRING
+$CURRENT_CHARGES
+$CURRENT_PAYMENTS
+$FEEPAYDETAIL
+Fees currently owed: $BALANCE
+$UNIDETAIL
+
+Ways to pay fees:
+1) Pay online via Paypal: a) Log in at paypal; b) Press pay or send money button c) send money to friends 
+    d) enter tkc@wustl.edu, and enter amount that you owe, put players name in the note field, press next 
+2) Check to Cabrini Sponsors Club or cash (one check per family is fine):
+Mail or hand deliver to school office (including note with players name)
+	St.Frances Cabrini Academy(Attn: Sponsors Club)
+	3022 Oregon  St. Louis MO 63118
+3) Give payment to any Cabrini team coach in envelope to Cabrini Sponsors Club and include note with player name.  Do not give
+payments to coaches from other schools if you've been transferred.
+If your player has dropped from the team or if you have a problem with this bill, please contact us at sfcasponsorsclub@gmail.com.
+

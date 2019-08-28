@@ -1,0 +1,12 @@
+The final game schedule for the $SCHOOL $GRADERANGE $GENDER $SPORT team coached by $COACH is listed below 
+along with street addresses for each location.  Exact game start times are listed so please arrive early for warmups.  
+Also please notify your team's coach if you are unable to make it to any of the games.
+
+In case of inclement weather/poor field conditions, please check the CYC rainout website at:
+https://rainoutline.com/search/dnis/3142666925
+If there is no recent update for your field, the game will be played.
+
+$SCHEDULE
+
+Addresses for your team's games are:
+$FIELDTABLE

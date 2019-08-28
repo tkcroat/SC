@@ -1,0 +1,11 @@
+From: Cabrini Sponsors Club <sfcasponsorsclub@gmail.com>
+To: $RECIPIENTSTR  
+Subject: $EMAILTITLE
+Please return the outstanding uniforms listed below from prior sports.  These can be dropped at the Cabrini school office during 
+normal school hours (washed, bagged, with note containing players name inside).  If you believe any have already been returned, please let 
+us know and we'll check the uniform closet for this uniform #.  
+
+$UNIDETAIL
+
+Thanks,
+Sponsors Club

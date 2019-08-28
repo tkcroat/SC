@@ -1,0 +1,11 @@
+From: Cabrini Sponsors Club <sfcasponsorsclub@gmail.com>
+To: $RECIPIENTSTR  
+Subject: $EMAILTITLE
+Here is a list of your team's uniforms that have not yet been returned.  If you have already received any of these 
+uniforms (or if any were never issued), please let me know.  I will soon email parents asking for their return.
+
+$TEAMTABLE
+Thanks,
+Kevin Croat
+Sponsors Club 
+

@@ -1,0 +1,5 @@
+Here is the game schedule for Cabrini $GRADERANGE $GENDER $SPORT.
+Date   Day   Time   Location 
+$SCHEDULE
+Addresses for your team's games are:
+$FIELDTABLE

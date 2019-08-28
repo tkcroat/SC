@@ -1,0 +1,748 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun  3 15:13:53 2016
+
+@author: tkcplayers['DOB'] =  pd.to_datetime(players['DOB'], format='%Y-%m-%d')
+"""
+import numpy as np
+import pandas as pd
+import glob, math
+import datetime
+from datetime import date
+from PIL import Image, ImageDraw, ImageFont
+
+import csv
+import glob
+import tkinter as tk
+import numpy as np
+from SC_signup_functions import findcards
+from email.mime.text import MIMEText
+import os
+
+import string
+import re
+import flask
+
+import sys
+
+# TODO interface directly w/ google form
+# TODO smarter file rename tool
+
+def openSmtpObj():
+    '''
+    Open and return smtp connection for gmail send
+    TODO rearrange messaging scripts to make single call 
+    '''
+    try:
+        mailserver = smtplib.SMTP('smtp.gmail.com', 587) # port 587
+        mailserver.set_debuglevel(True)
+        mailserver.starttls() # enable encryption for send 
+        print('Enter password for sponsors club gmail ')
+        passwd=input()
+        mailserver.login('sfcasponsorsclub@gmail.com', passwd)
+        mailserver.ehlo() # say hello
+    except:
+        print("Mail Server Error:", sys.exc_info()[0])
+        mailserver=np.nan
+    return mailserver
+
+def removeOldKids(players):
+    '''
+    Remove if >16 
+    '''
+    
+
+    
+def prepPMSchedule(allteams):
+    '''
+    
+    '''
+    allteams=allteams[pd.notnull(allteams['Visitor Name'])]
+
+
+def finddiv(sched):
+    '''
+    
+    '''
+    
+# TODO modify for possibility of multiple teams per grade
+df=findmissinginfo(df, players, famcontact)
+index=2  row=df.loc[index]
+
+kwargs={}
+kwargs.update({'Comment':'Pay direct to OLS league'})
+
+test=maketracksummary(Mastersignups, 2017, players)
+test.to_csv('track_summ.csv', index=False)    
+unilogfile=pd.read_excel('Fall_2017_uniform_log.xlxs') 
+
+def sync_unilogs(unilist, Mastersignups, teams, oldteams):
+    '''
+    Both are primary sources so discrepancies should be resolved (i.e. after 
+    inventory)
+    Check-out or Check-in options if conflicting
+    '''
+    # need 
+    
+
+
+def update_uniinfo(unilogfile, unilist, Mastersignups):
+    ''' 
+    After uniform night or other event, use unilogfile with possible new info
+    and update both unilogfile and mastersignups in self-consistent manner 
+    
+    Need to synchronize master unilist, mastersignups and uniform log (often 
+    read back with unique information )
+    Assumes unique size/number/uniset 
+    '''
+    
+    
+def display_conflict(group):
+    ''' In cases of conflicting uniform info send to gui for display/resolution
+    '''
+
+'''TESTING 
+teams=SCbill.loadoldteams(['Winter'], [2017]) 
+unilogfile='Winter_2017_uniform_log.xlsx'
+row=alluniplayers.iloc[1]
+index=row.name
+year=2017
+'''
+
+
+# TESTING  test=grouped.get_group(('Postup','13'))
+#  unis.groupby(['Uniforms','Year','Gender']).size()
+# unis[unis['Year']==2016].groupby(['Uniforms','Year','Gender']).size()
+# unis[(unis['Year']==2016) & (unis['Uniforms']=="Y")].groupby(['Uniforms','Year','Gender','Team','Sport']).size()
+
+def mark_return_tk():
+    '''
+    Interactive stamping of return date on suspected returned unis in mastersignups
+    maybe not necessary eventually if master unilist takes off
+    '''
+    
+    pass
+
+def matchunisets(Mastersignups, teams, oldteams):
+    '''
+    Get uniset for all uniforms issued in mastersignups... needed before compare
+    w/ master unilist 
+    '''
+    unis=Mastersignups.dropna(subset=['Issue date']) # only signups with uniform issued
+    # mycols=teams.columns
+    teams=pd.concat([teams,oldteams])
+    unis=pd.merge(unis, teams, how='left', on=['Year','Sport', 'Team'], suffixes=('','_2'))
+    # Y or nan for uniform set not useful for uniform tracking
+    unis=unis[pd.notnull(unis['Uniforms'])] # probably old ones we don't care about
+    # without knowing the set, also not useful
+    unis=unis[unis['Uniforms']!='Y']
+    # remove ?? in uniform number
+    unis=unis[unis['Uniform#']!='??']
+    # Drop returned uniforms?
+    unis=unis[pd.notnull(unis['UniReturnDate'])] 
+    grouped=unis.groupby(['Uniforms','Uniform#'])
+    for (uniset, num), group in grouped:
+        if len(group)>1:
+            gr=group.groupby('Plakey')
+            for key, gro in gr:
+                if len(gro)>1:
+                    mark_return_tk(gro)
+                    print(uniset, num, len(group))
+                else: # multiple checkouts to same player (mark older returned)
+                    
+                    
+            print(uniset, num, len(group))
+            # multiple reports on same .. 
+            # keep most recent issue date, ensure older ones marked returned
+            test=test.sort_values(['Issue date'], ascending=False)
+            older=test.iloc[1:]
+            older=older[pd.isnull(older['Return date'])]
+            
+            test.iloc[0]['Issue date']
+            test.iloc[1]['Issue date']
+        
+
+    unisets=np.ndarray.tolist(unis.Uniforms.unique())
+    unisets=[i for i in unisets if str(i)!='nan']
+    unisets=[i for i in unisets if i!='Y']
+    
+    grouped=unis.groupby(['Uniforms','Uniform#'])
+    
+    for (uniset, num), group in grouped:
+        print(uniset, num, len(group))
+    # Keeps only unreturned uniforms
+    outunis=outunis.loc[pd.isnull(outunis['Uni return date'])] 
+
+
+
+# Finish DOB timestamp to formatted string conversion
+def maketrackroster(df, players, year):
+    ''' Pat moore format for track rosters autosaved
+    I;Smith;Mary;;F;04/01/2008;SGM;St. Gerard Majella
+    ''' 
+    temp=df[(df['Year']==year) & (df['Sport']=='Track')]
+    temp=temp[temp['Team']!='drop'] # drop the drops
+    # Get DOB
+    temp=pd.merge(temp, players, on=['Plakey'], how='left', suffixes=('','_2'))
+    temp['Type']='I'
+    temp['Teamcode']='SFC'
+    temp['Blank']=''
+    temp['Teamname']='St. Frances Cabrini'
+    mycols=['Type','Last','First','Blank','Gender','DOB','Teamcode','Teamname']
+    temp=temp[mycols]
+    temp['DOB']=pd.to_datetime(temp['DOB'], format="%m/%d/%Y", errors='coerce')
+    temp['NewDOB']=temp['DOB'].date()
+    temp['DOB']=temp.loc[index]['DOB'].date()
+    fname='Cabrini_trackroster_'+str(year+1)+'.csv.'
+    temp.to_csv(fname, index=False)
+    return
+
+def creditOLS(df, season, year, paylog, **kwargs):
+    ''' Enter a credit/waiver into paylog for various types of signups
+    i.e. OLS league direct pay 
+    df is mastersignups'''
+    
+    # Convert Timestamp to datetime (default value on import)
+    paylog.Date=paylog.Date.apply(lambda x:x.date())
+    # Remove players than have dropped (drop as team assignment) 
+    thismask=df['Team'].str.contains('drop',na=False,case=False)
+    df=df.loc[~thismask]
+    df=df.dropna(subset=['Team']) # also drop those not yet assigned to a team
+    CurrentSU, PriorSU =getthisperiod(df, season, year, 0) # returns subset of signups in specified period
+    for index, row in CurrentSU.iterrows():
+        if 'OLS' in row.Team:
+            payrow=makecredit(paylog, season, row, 30, **kwargs)
+            print('Credit added for', row.First, row.Last)
+            paylog=paylog.append(payrow, ignore_index=True)
+    paylog.Date
+    
+datetime.datetime.today()
+datetime.datetime.now()
+
+datetime.date(row.Date)
+
+
+def makecredit(paylog, season, row, amount, **kwargs):
+    ''' Make credit row for addition to paylog for given selected row (of specified amount) '''
+    row=row.set_value('Amount', 30)
+    row=row.set_value('Season', season)
+    row=row.set_value('Delivered', 'n/a')
+    row=row.set_value('Paytype', 'credit')
+    row=row.set_value('Comment', kwargs.get('Comment',''))
+    thisdate=datetime.datetime.strftime(datetime.datetime.now(),format="%m/%d/%Y")
+    row=row.set_value('Date', thisdate)
+    row.Date=row.Date.apply()
+    row.Date=row.Date.apply(lambda x:datetime.datetime.strptime(x, "%m/%d/%Y"))
+    pd.to_datetime.strptime(row.Date, "%m/%d/%Y")
+    row=row.set_value('Paykey', int(paylog.Paykey.max()+1))
+    return row[paylog.columns]
+    
+
+unilog=pd.read_excel('Master_uniform_logbook.xlsx', sheetname='Uniforms')
+unilist=pd.read_excel('Master_uniform_logbook.xlsx', sheetname='Unilist')
+
+def update_unilist():
+    ''' Update uniform in/out and plakey based on current season's
+    uniform log  '''
+    # Change size in master signups if issued size different than requested
+    
+    # interactive conflicts handling
+    
+def getsizedists(Mastersignups, season, year, teams, unilog,):
+    ''' Get size distributions desired by team's players 
+    After team is assigned a uniform set, change unavailable sizes 
+    move up or down based on availability  '''
+    sportsdict={'Fall':['VB','Soccer'], 
+            'Winter':['Basketball'],'Spring':['Track','Softball','Baseball','T-ball']}
+    sportlist=sportsdict.get(season,[])
+    SUs=Mastersignups[(Mastersignups['Year']==year) & (Mastersignups['Sport'].isin(sportlist))]
+    uniteams=teams[teams['Uniforms']!='N']
+    # Get size distribution of players needing uniforms 
+    for i, team in enumerate(uniteams.Team.tolist()):
+        thisteam=SUs[SUs['Team']==team]
+        print(len(thisteam))
+    
+    sizedist
+
+# TESTING index=0  row=unilog.loc[index]
+sizes=['YM','YL','YXL','S','M','L','XL','2XL']
+
+for index, row in unilog.iterrows():
+    thisset=unilist[unilist['Setname']==row.Setname]
+    grouped=thisset.groupby(['Location','Size'])
+    for []
+    thisset.groupby(['Location','Size']).count()
+    for     
+    
+    print(len(thisset))
+
+thisset.Number.tolist()
+
+def updateunilog():
+    ''' Using unilist update in, out, missing totals in unilog first page
+    in is instock (closet) after inventory
+    out includes missing & assigned (make assigned plakey list and missing
+    '''
+
+
+    
+def assigntotwoteams(df, Twoteams):
+    ''' Randomly pick a team if two are available  '''
+    
+
+def assigntoteams(df, season, year, teams, overwrite=False):
+    '''From mastersignups finds CYC team name based on year, grade, gender and sport from teams tab 
+    (which only contains names from this season/year to avoid screwing up old custom team assignments''' 
+    # teamsmult has multi grade range teams with duplicates for merge matching
+    # twoteams is multiple teams for same grade
+    Teamsmult, Twoteams=makemultiteam(teams) # makes duplicates team entries to match both grades
+    # Compare grades as ints with K=0 
+    df.Grade=df.Grade.replace('K','0', regex=True) # convert Ks to zeros
+    df['Grade']=df['Grade'].astype('int')
+    Teamsmult['Grade']=Teamsmult['Grade'].astype('int') # ensure these are ints
+    # First deal with gender, grade, sport w/ multiple team options (twoteams)
+    df=assigntotwoteams(df, )
+    # left merge keeps all master_signups oentries
+    df=pd.merge(df, Teamsmult, how='left', on=['Year','Grade','Gender','Sport'], suffixes=('','_r'))
+    # need to drop SUkey duplicates (keeping first)... occurs if >1 team per grade
+    df=df.drop_duplicates(subset=['SUkey']) # drops any duplicates by unique SUkey
+    # Consider all sports except Track (team assignment done separately by DOB)
+    sportsdict={'Fall':['VB','Soccer'], 'Winter':['Basketball'],'Spring':['Softball','Baseball','T-ball']}
+    sportlist=sportsdict.get(season)
+    # this is post-merge so no chance of getting indices screwed up 
+    # select current sports & year and subset with new team assignment
+    CurrentSU=df.loc[(df['Sport'].isin(sportlist)) & (df['Year']==year) & (pd.notnull(df['Team_r']))]
+    if overwrite==False: # if no overwrite, keep only those with nan for team
+        CurrentSU=CurrentSU.loc[pd.isnull(CurrentSU['Team'])]
+    # Never overwrite team assignment for known drops
+    CurrentSU=CurrentSU[CurrentSU['Team']!='drop']
+    counter=0
+    for index, row in CurrentSU.iterrows(): 
+        # all remaining can be overwritted (those w/ existing team dropped above)
+        match=df[df['SUkey']==CurrentSU.loc[index]['SUkey']]
+        if len(match)==1:
+            thisind=match.index[0]
+            # add new team assignment to correct index in original master signups
+            df=df.set_value(thisind, 'Team', CurrentSU.loc[index]['Team_r'])
+            counter+=1
+    print(str(counter),' player(s) newly assigned to teams')
+    # now drop extra columns and sort 
+    mycols=['SUkey','First', 'Last', 'Grade', 'Gender', 'Sport', 'Year', 'Team', 'Plakey','Famkey', 'Family', 
+    'SUdate', 'Issue date', 'Uniform#','Uni return date'] 
+    df.Grade=df.Grade.replace('K',0)
+    df=df.sort_values(['Year','Sport', 'Gender', 'Grade'], ascending=True)
+    df.Grade=df.Grade.replace('0','K', regex=True) # make sure any 0 grades are again replaced with K
+    df=df[mycols]
+    autocsvbackup(df,'master_signups', newback=True) # autobackup of master signups
+    df.to_csv('master_signups.csv', index=False) # save/overwrite existing csv
+    return df
+# Team splitter/ rearranger
+
+
+
+'''TESTING
+sport, team, school, graderange, gender, coachinfo, playerlist=teamlist[1]
+'''
+
+duration=1.5
+kwargs={}
+kwargs.update({'sport':'soccer'})
+kwargs.update({'subject':'Ethan soccer game'})
+
+tempstr='10:30 AM'
+pd.to_datetime(tempstr).strftime('%H:%M:%S')
+
+famcontact=update_contact(ser, famcontact)
+
+# from twilio.rest import TwilioRestClient # text messaging ($10/mo)
+#%%
+thissched=getgameschedule(sched, sport, team, school, graderange, coachinfo)
+
+kwargs={}
+kwargs.update({'teams':teams})  # all teams with Cabrini kids assigned (Cabrini + transfers)        
+teams=SCbill.loadoldteams('Fall', 2016) # load prior season's teams
+teamlist=findschteams(df, teams)
+
+teamnamedict=findschteams(sched, teams, coaches)
+
+teaminfo=getteaminfo(teams)
+
+thissched=getthissched(schname, sched)
+getgameschedule(schname, sched)
+
+for key, [div,name] in teamnamedict.items():
+    thissched=getgameschedule(div, name, sched)
+    print(div, name)
+    print(len(thissched))
+    
+schname=teamnamedict.get(team,'')
+thissched=getthissched(schname, sched)
+
+# TODO need a dictionary of real name and scheduled name
+
+def getCYCschedules(df, **kwargs):
+    '''Get Cabrini team schedules from Pat Moore jumbo spreadsheet 
+    kwargs div  ... 
+    probably legacy as output format has changed
+    '''
+    df=df.rename(columns={'Game Time':'Time','Field Name':'Location','AwayTeam':'Away','Home Team':'Home'})    
+    # return only passed grade (can be used in combo with other options)
+    if 'div' in kwargs:
+        div=kwargs.get('div','')
+        df=df[pd.notnull(df['Division Name'])]
+        df=df[df['Division Name'].str.contains(div)]
+    if 'school' in kwargs: # get only passed school name
+        school=kwargs.get('school','')
+        df=df[df['Home'].str.contains(school) | df['Away'].str.contains(school)]
+    # get all from Cabrini teams list (including non-Cabrini transfers)
+    elif 'teams' in kwargs:
+        teams=kwargs.get('teams',pd.DataFrame())
+        teamlist=findschteams(df, teams)
+        df=df[df['Home'].isin(teamlist) | df['Away'].isin(teamlist)]
+    df=df[pd.notnull(df['Date'])] # removes unscheduled games
+    # split day/date field
+    df['Day']=df['Date'].str.split(' ').str[0].str.strip()
+    df['Date']=df['Date'].str.split(' ').str[1].str.strip()
+    mycols=['Date','Day','Time','Location','Home','Away']
+    df=df[mycols]
+    # shorten team names 
+    df.Home=df.Home.str.replace('St Frances Cabrini','Cabrini')
+    df.Home=df.Home.str.replace('St ','')
+    df.Away=df.Away.str.replace('St Frances Cabrini','Cabrini')
+    df.Away=df.Away.str.replace('St ','')
+    return df
+
+test=df[df['Home'].isin(teamlist)]
+
+               
+def getschoolnames(df):
+    ''' '''
+    df=df[pd.notnull(df['Home Team'])]
+    teams=np.ndarray.tolist(df['Home Team'].unique())
+    schools=[s.split('/')[0] for s in teams]
+    schools=set(schools)
+    schools=list(schools)
+
+test=famcontact[famcontact['Family']=='Lehrer']
+# TODO summary by gender/grade also needed (preliminary)
+mytab=zipgroups.to_html()
+
+
+import tkinter as tk
+
+
+rows=Recs.get_group(('Vance','Delong'))
+
+
+test=players[players['Last']=='Norwood']
+
+messfile='messages\\CYCcard_needed.txt'
+
+def findmissingcards(Mastersignups, season, year):
+    ''' Find all players on CYC level teams, search for card and return list
+    without scan on file... send prompt/ reminder incl. team assignment 
+    grouped by famkey  '''
+
+def updateteam():
+    ''' Send confirmation about signup + current team summary; ask about other players 
+    include ideal #; mention missing players  '''
+
+    
+
+
+# TODO .. how about a more sophisticated imperfect matcher via tk... currently only used for very likely new 
+#  player     
+    
+
+def checkalias_gui(first, last, DOB, match):
+    ''' Confirm ID of some player and possibly add alias to players.csv
+    passing both match rows?  '''
+    root = tk.Tk()
+    yesvar=tk.IntVar()
+    novar=tk.IntVar()
+    aliasvar=tk.IntVar()
+    yesvar=0
+    novar=0
+    aliasvar=0
+    def choosea():
+        yesvar=1
+        root.destroy()
+    def chooseb():
+        aliasvar=1
+        root.destroy()
+    def choosec():
+        novar=1
+        root.destroy()
+    T=tk.Text(root, height=4, width=5)
+    mystr='Associate player', first, last, DOB ' with existing player', first
+    T.insert(END, 'some string')
+    a=tk.Button(root, text='ID player but skip alias').pack()
+    b=tk.Button(root, text='ID and add name as alias').pack()
+    c=tk.Button(root, text='Do not ID player').pack()
+    a.bind("<Button-1>", choosea)
+    b.bind("<Button-1>", chooseb)
+    c.bind("<Button-1>", choosec)
+    # add alias first to player's info?
+    root.mainloop()
+    vallist=[yesvar, aliasvar, novar]
+    
+
+def moveplayers(df, team):
+    ''' In case of multiple teams for same gender grade, use listbox to shift/reassign players from one 
+    team to another;  initial assignment can be random '''from Tkinter import *
+    # Use global variables to get thes
+    
+    master = Tk() # creates window object
+    master.title('Team tinkering')
+    # can set sizing
+    listbox = Listbox(master)
+    listbox.pack() # embeds this on page 
+    
+    listbox2 = Listbox(master)
+    
+    def moveDown():
+    
+        move_text = listbox.selection_get()
+        curindex = int(listbox.curselection()[0])
+        listbox.delete(curindex)
+        listbox2.insert(END, move_text)
+    
+    moveBtn = Button(master, text="Move Down", command=moveDown)
+    moveBtn.pack()
+        
+    listbox2.pack()
+    
+    for item in ["one", "two", "three", "four"]:
+        listbox.insert(END, item)
+    
+    mainloop() # continuous run 
+     
+# This option would also send paper bill summary subsection for each family who still owes to coach
+# current e-bill to coach only has brief summary table for each player
+# maybe worth adding this later
+def messagecoachbill(teams, coaches, billlist, players, emailtitle, messageheader):
+    '''Aggregate info about text/call only players and send to coaches in single file'''
+    noemaillist=billlist.loc[billlist['Email1'].isnull()] # subset with no working e-mail address
+    teamlist=np.ndarray.tolist(teams.Team.unique())
+    for i, team in enumerate(teamlist):
+        # get head coach e-mail address
+        coachemail=getcoachemail(team, teams, coaches)
+        if coachemail=='':
+            continue
+        thisteam=noemaillist[noemaillist['Teams'].str.contains(team)]
+        if len(thisteam)==0: # Skip team if all players have working e-mail addresses
+            # could send a different message
+            continue
+        papermessage=makecoachmessage(thisteam)
+        fullmessage=messageheader+papermessage
+        # insert coach e-mail address and e-mail title
+        fullmessage=fullmessage.replace('$RECIPIENTSTR', coachemail)
+        fullmessage=fullmessage.replace('$EMAILTITLE', emailtitle)
+        # re-structure to allow testing to log (similar to ebill structure)
+
+def makecoachmessage(thisteam, players):
+    '''Passed subset of text-only players for this team (df with rows from main bill); make summary for e-mail to 
+    coach '''
+    thisstring=''
+    for index, row in thisteam.iterrows():
+        thisstring+='Family:'+thisteam.loc[index]['Family']+'\n'
+        plakeys=thisteam.loc[index]['Plakeys']
+        plakeys=[int(s) for s in plakeys.split(',')]
+        tempstr=getplayers(plakeys, players)
+        thisstring+='Players:'+tempstr+'\n'
+        thisstring+='Fees for this season: '+str(thisteam.loc[index]['Charges'])+'\n'
+        thisstring+='Payments for this season: '+str(thisteam.loc[index]['CurrPayment'])+'\n'
+        thisstring+='Fees/Payments from prior season(s): ' + thisteam.loc[index]['Feepaydetail']
+        thisstring+='Total fees due: '+str(-thisteam.loc[index]['Balance'])
+        thisstring+=thisteam.loc[index]['Unidetail'] # family's uniform situation
+        thisstring+="Text message for player's family (optional):\n"
+        thisstring+=thisteam.loc[index]['Textmessage']+'\n'
+    return thisstring
+
+# formatting of xls files using xlsxwriter
+format2 = workbook.add_format({'num_format': 'mm/dd/yy'})
+worksheet.write('A2', number, format2) 
+
+def writeuniformlog(df, teams, players, season, year, paylog):
+    ''' From mastersignups and teams, output contact lists for all teams/all sports separately into separate tabs of xls file
+    autosaves to "Fall2016"_uniform_log.xls'''
+    # Slice by sport: Basketball (null for winter?), Soccer, Volleyball, Baseball, T-ball, Softball, Track) 
+    
+    df=df[df['Year']==year] # remove prior years in case of duplicate name
+    df=df.reset_index(drop=True)
+    # get school from players.csv
+    df=pd.merge(df, players, how='left', on=['Plakey'], suffixes=('','_r'))
+    # find Cabrini teams from this season needing uniforms
+    thismask = teams['Uniforms'].str.contains('y', case=False, na=False)
+    uniformteams=teams.loc[thismask]
+    uniformlist= uniformteams.Team.unique() 
+    uniformlist=np.ndarray.tolist(uniformlist)
+    # single uniform log per season 
+    contactfile=str(season)+'_'+str(year)+'_uniform_log.xlsx'
+    writer=pd.ExcelWriter(contactfile, engine='xlxswriter',date_format='mm/dd/yy')
+    # Can just eliminate any entries not in uniform deposit list
+    df=df[df['Team'].isin(uniformlist)] # only players on teams needing uniforms
+    # columns needed for log output
+    mycols=['First', 'Last', 'School', 'Issue date', 'Uniform#', 'Amount', 'Deposit type', 'Deposit date', 'Uni return date', '$ returned', 'Comments', 'Plakey', 'Famkey'] 
+    tabnamelist=[]
+    for i, team in enumerate(uniformlist):
+        thismask = df['Team'].str.contains(team, case=False, na=False)
+        thisteam=df.loc[thismask] # this team's signups
+        sport=thisteam.iloc[0]['Sport'].lower()
+        thisteam=finddeposits(thisteam, paylog) # thisteam is this team's slice of info from master_signups
+        dropcollist=[s for s in thisteam.dtypes.index if s not in mycols]
+        thisteam.drop(dropcollist, axis=1, inplace=True) # drops extraneous columns
+        thisteam=thisteam[mycols] # organize in correct format for xls file
+        tabname=sport[0:3]+team[0:3] # name tab with team's name..
+        if tabname in tabnamelist:
+            tabname+='2' # handles two teams per grade
+        tabnamelist.append(tabname)
+        thisteam.to_excel(writer,sheet_name=tabname,index=False) # this overwrites existing file
+        # Now need to retrieve to allow header modification
+        workbook=writer.book
+        worksheet=writer.sheets(tabname) # retrieves this team
+        worksheet.set_header([header=tabname+team],) # set tab header to tab + team name
+    writer.save()
+    return
+
+billlist=pd.read_csv('Billlist_18Jan17.csv')
+
+def getplayers(plakeys, players):
+    ''' Returns player first last name list for entire family (from passed list of player keys)'''
+    theseplayers=players[players['Plakey'].isin(plakeys)]
+    tempstr=''
+    for index, row in theseplayers.iterrows():
+        tempstr+=theseplayers.loc[index]['First']
+        tempstr+=theseplayers.loc[index]['Last']+'; '
+    return tempstr
+        
+def transferunistr(df, season, year, famkey):
+    '''Reminder to return uniforms from transfer teams from just prior season 
+    current setup for old uniform e-mail and SMS deals with Cabrini only''' 
+    df=df.dropna(subset=['Issue date']) # only signups with uniform issued
+    mask=pd.isnull(df['Uni return date'])
+    df=df.loc[mask] # keeps only unreturned uniforms
+    df=df[df['Famkey']==famkey] # this family's outstanding uniforms
+    unikeys=np.ndarray.tolist(df.SUkey.unique()) # list of signup keys with outstanding uniforms
+    # create string for e-bill with outstanding uniforms
+    unistr=''
+    if len(df)>0:
+        unistr+='Old uniforms to return\n'
+        unistr+='Player\tSport\tUni #\tTeam\n'
+        for index, row in df.iterrows():
+            first=df.loc[index]['First']
+            sport=df.loc[index]['Sport']
+            num=df.loc[index]['Uniform#']        
+            team=df.loc[index]['Team']
+            unistr+=first + '\t' + sport + '\t' +str(num) + '\t'+ team +'\n'
+    return unistr, unikeys
+
+messagename='messages\\ebill_uninight.txt'
+
+# various modules to attempt direct read-write from google drive                
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+def readGDsignups():
+    '''Read file from google drive and compare with Excel version ... find new entries  '''
+
+scope = ['https://spreadsheets.google.com/feeds']
+credentials = ServiceAccountCredentials.from_json_keyfile_name('GoogleAPI_credential.json', scope)
+docid = "182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g" # winter signups file
+client = gspread.authorize(credentials)
+spreadsheet = client.open_by_key(docid)
+for i, worksheet in enumerate(spreadsheet.worksheets()):
+    filename = docid + '-worksheet' + str(i) + '.csv'
+    with open(filename, 'wb') as f:
+        writer = csv.writer(f)
+        writer.writerows(worksheet.get_all_values())
+        
+year=2016
+season='Winter'
+df=Mastersignups
+thissum= summarizesignups(df, season, year)
+
+def autocsvbackup(df, filename, newback=True):
+    ''' Pass df (i.e players for backup and basename (i.e. "family_contact" for file.. finds list of existing backups and keeps ones of 
+    certain ages based on targetdates list; 
+    can't remember why was newback=False was needed (always true here to make new backup)
+
+    ''' 
+    # targetdates gives ideal ages of list of backup files
+    targetdates=[datetime.timedelta(120,0,0),datetime.timedelta(7,0,0)]
+    now=datetime.datetime.now()
+    mystr='*'+ filename +'*.csv'
+    filelist=glob.glob(mystr)
+    dates=[] # list of file backup dates
+    fileage=[] # age of backup
+    for i,name in enumerate(filelist):        
+        if '_' not in name:
+            continue
+        try:
+            thisdate=name.split(filename+'_')[1] # splits at players_
+            thisdate=thisdate.split('.csv')[0]
+            thisdate=datetime.datetime.strptime(thisdate, "%d%b%y")
+            age=now-thisdate
+            fileage.append(age)
+            dates.append([thisdate, age, name])
+        except:
+            print('Problem getting date from file', name)
+    dates.sort() # sort earliest to latest
+    fileage.sort(reverse=True) # list of datetimes doesn't show in var list
+    if newback==True: 
+        if len(dates)==0:  # no existing backups so make one
+            fname=filename+'_'+datetime.date.strftime(now, "%d%b%y")+'.csv'
+            df.to_csv(fname,index=False)
+            print(fname + ' saved to file')
+            dates.append([now, now-now,fname])
+            fileage.append(now)
+        if dates[-1][1]>datetime.timedelta(2,0,0): # also make if no backup in last 2 days (checks youngest file)
+            fname=filename+'_'+datetime.date.strftime(now, "%d%b%y")+'.csv'
+            df.to_csv(fname,index=False)
+            print(fname + ' saved to file')
+            dates.append([now, datetime.timedelta(0,0,100),fname]) 
+            # enter 100ms as timedelta for new backup
+            fileage.append(datetime.timedelta(0,0,100)) # fileage needs to be a timedelta
+    # find list of files closest to ~4 mo old backup, 1 week old, and recent backup (2 days ish)
+    #  keep at 4 mo and 1 week 
+    keepindices=[] # finds index of which backup is closest to target dates (can be duplicates)
+    for i,thisage in enumerate(targetdates):
+        # find closest entry to each
+        ind, age = min(enumerate(fileage), key=lambda x: abs(x[1]-thisage))
+        keepindices.append(ind)
+    keepindices.append(len(dates)-1) # always keep most recent backup
+    
+    # for list of lists, any way to just make list of element 1 
+    for i, datelist in enumerate(dates):
+        if i not in keepindices: # deletes those entries that are not closest to target dates
+            os.remove(datelist[2])
+    return
+ 
+def standardizeparish(ser):
+    ''' Clean up and standardize all the acronyms ... just run on entire series'''
+    # Parse standard names/ parse raw input ... fuzzy match then pass to tkinter
+    df=stripwhite(df)
+    for index, row in df.iterrows()
+        
+# TODO standardize parish names as done in standardizeschool
+
+# Saving of various files
+famcontact.to_csv('family_contact.csv', index=False)  
+SCsignup.to_csv('current_signups.csv', index=False) 
+Mastersignups.to_csv('master_signups.csv', index=False)
+players.to_csv('players.csv', index=False, date_format='%m/%d/%Y') # use consistent datetime format
+# need to specify date format... autoconverts datetime to string
+
+def getCYCname(plakey, players):
+    ''' Returns exact first and last names of player as found on CYC card from player key'''
+    match = players[(players['Plakey']==plakey)]
+    if len(match)==0:
+        print('Player key # ', plakey, 'not found in database.')
+        return   
+    elif len(match)>1:
+        print('Multiple matches for player key # ', plakey, 'in database.')
+        return
+    else:
+        first=match.iloc[0]['First']
+        last=match.iloc[0]['Last']
+        return first, last

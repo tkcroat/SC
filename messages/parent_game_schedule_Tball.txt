@@ -1,0 +1,12 @@
+The game schedule for the $SCHOOL $GRADERANGE co-ed K team coached by $COACH is listed below.  
+Exact game start times are listed so please arrive early for warmups.
+Also please notify your team's coach if you are unable to make it to any of the games.
+
+In case of inclement weather/poor field conditions, please check the Epiphany Tball website at:
+https://epiphanystl.org/instructional-t-ball-league
+
+
+$SCHEDULE
+
+Addresses for your team's games are:
+$FIELDTABLE
