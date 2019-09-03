@@ -58,9 +58,20 @@ def emailparent_tk(teams, signupfile, season, year):
     transmessfile=tk.StringVar() # text of e-mail message for transfers
     extravar=tk.StringVar() # use depends on message type... normally filename
     extraname=tk.StringVar() # name for additional text entry box (various uses mostly filenames)
-    extraname.set('Extra file name') # default starting choice
+    extraname.set('Extra_file_name.txt') # default starting choice
     choice=tk.StringVar()  # test or send -mail 
     
+    def chooseFile(txtmess, ftypes):
+        ''' tkinter file chooser (passes message string for window and expected
+        file types as tuple e.g. ('TXT','*.txt')
+        '''
+        root=tk.Tk() # creates pop-up window
+        root.update() # necessary to close tk dialog after askopenfilename is finished
+        # tk dialog asks for a single station file
+        full_path = tk.filedialog.askopenfilename(title = txtmess, filetypes=[ ftypes] )
+        root.destroy() # closes pop up window
+        return full_path
+
     def choose_message():
         # choose existing message (.txt file)
         root=tk.Tk() # creates pop-up window
@@ -166,8 +177,19 @@ def emailparent_tk(teams, signupfile, season, year):
     tk.Label(messageframe, text=extraname.get()).grid(row=rownum, column=0)
     extraentry=tk.Entry(messageframe, textvariable=extravar)
     extraentry.grid(row=rownum, column=1)
+    # Extra file chooser button 
+    # button arg includes file type extension .. get from messfile
+    try:
+        ft = extraname.get().split('.')[-1]
+        ftypes =("%s" %ft.upper(), "*.%s" %ft)
+    except:
+        ftypes =("CSV" , "*.*") # default to all files 
+    # TODO fix extra file chooser
+    d=tk.Button(messageframe, text='Choose file', command=chooseFile('Choose extra file', ftypes) )
+    d.grid(row=rownum, column=2)
+
     recruitcheck=tk.Checkbutton(messageframe, variable=recruitbool, text='Recruit more players for short teams?')
-    recruitcheck.grid(row=rownum, column=2) # can't do immediate grid or nonetype is returned
+    recruitcheck.grid(row=rownum, column=3) # can't do immediate grid or nonetype is returned
     rownum+=1    
     messageframe.grid(row=0, column=0)
     # Specific team selector section using checkboxes
@@ -270,12 +292,14 @@ def emailparent_tk(teams, signupfile, season, year):
                 print('Problem opening schedule and other required files for sending game schedules')
                 fname=filedialog.askopenfilename(title='Select schedule file.')
                 sched=pd.read_csv(fname)
-            fields=pd.read_excel('Teams_coaches.xlsx', sheetname='Fields')
-            Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437')
-            coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+            # fields=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Fields')
+            fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv')
+            Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
+            #coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+            coaches=pd.read_csv(cnf._INPUT_DIR+'\\coaches.csv')
             # INTERNAL TESTING 
             # Mastersignups=Mastersignups[Mastersignups['Last']=='Croat']
-            famcontact= pd.read_csv('family_contact.csv', encoding='cp437')
+            famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
             with open(messagefile, 'r') as file:
                 blankmess=file.read()
             # open and send master CYC schedule 
@@ -294,7 +318,11 @@ def emailparent_tk(teams, signupfile, season, year):
                     Recruits=pd.read_csv(cnf._OUTPUT_DIR+'\\%s%s_recruits.csv' %(season, year))
                     print('Loaded possible recruits from csv file')
                 except:
-                    print('Problem loading recruits from excel or csv files')
+                    fname=filedialog.askopenfilename(title='Select recruits file.')
+                    if fname.endswith('.csv'): # final move is query for file
+                        Recruits=pd.read_csv(fname)
+                    else:
+                        print('Recruits file needed in csv format.')
                     return
             emailrecruits(Recruits, famcontact, emailtitle, messagefile, **kwargs)
             
@@ -303,11 +331,12 @@ def emailparent_tk(teams, signupfile, season, year):
             if recruitbool.get():
                 kwargs.update({'recruit':True})
             try:
-                Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437')
-                coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+                Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
+                #coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches')
+                coaches=pd.read_csv(cnf._INPUT_DIR+'\\coaches.csv', encoding='cp437')
                 # INTERNAL TESTING 
                 # Mastersignups=Mastersignups[Mastersignups['Last']=='Croat']
-                famcontact= pd.read_csv('family_contact.csv', encoding='cp437')
+                famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
                 with open(messagefile, 'r') as file:
                     blankmess=file.read()
                 tranmessagefile='messages\\'+transmessfile.get()
@@ -320,7 +349,7 @@ def emailparent_tk(teams, signupfile, season, year):
         if mtype.get()=='Unis':
             try:
                 missing=pd.read_csv(messfile.get(), encoding='cp437')
-                oldteams=pd.read_excel('Teams_coaches.xlsx', sheetname='Oldteams') # loads all old teams in list
+                oldteams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Oldteams') # loads all old teams in list
                 kwargs.update({'oldteams':oldteams,'missing':missing})                
             except:
                 print('Problem loading missingunis, oldteams')
@@ -329,8 +358,8 @@ def emailparent_tk(teams, signupfile, season, year):
             askforunis(teams, Mastersignups, year, famcontact, emailtitle, blankmess, **kwargs)
         if mtype.get()=='Cards':
             try:
-                famcontact= pd.read_csv('family_contact.csv', encoding='cp437')
-                Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437')
+                famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
+                Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
                 with open(messagefile, 'r') as file:
                     blankmess=file.read()
             except:
@@ -340,9 +369,9 @@ def emailparent_tk(teams, signupfile, season, year):
             askforcards(teams, Mastersignups, year, famcontact, emailtitle, blankmess, **kwargs)
         if mtype.get()=='Other':
             try:
-                famcontact= pd.read_csv('family_contact.csv', encoding='cp437')
-                Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437')
-                coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+                famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
+                Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
+                coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches')
                 with open(messagefile, 'r') as file:
                     blankmess=file.read()
             except:
@@ -352,9 +381,10 @@ def emailparent_tk(teams, signupfile, season, year):
             sendteammessage(teams, year, Mastersignups, famcontact, coaches, emailtitle, blankmess, **kwargs)
         if mtype.get()=='All':
             try:
-                famcontact= pd.read_csv('family_contact.csv', encoding='cp437')
-                Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437')
-                coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+                famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
+                Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
+                #coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches')
+                coaches=pd.read_excel(cnf._INPUT_DIR+'\\coaches.csv')
                 with open(messagefile, 'r') as file:
                     blankmess=file.read()
             except:
@@ -640,6 +670,7 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
         school  - Cabrini 
     '''
     #  8/25 adjusted for 
+    inCols=sched.columns
     if 'school' in kwargs:
         if kwargs.get('school','')=='Cabrini':
             # drop transfer teams w/ #
@@ -671,7 +702,13 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
     cabsched['Home']=cabsched['Home'].str.replace('St Frances','')
     cabsched['Away']=cabsched['Away'].str.replace('St Frances','')
     cabsched=cabsched.sort_values(['Division','Date','Time'])
-    cabsched=cabsched[['Date','Time','Day','Location','Division','Home','Away','Game #','Team']]
+    # now sort 
+    myCols=['Date','Time','Day','Location','Division','Home','Away','Team']
+    # add col if missing from CYC schedule
+    for miss in [i for i in myCols if i not in inCols]:
+        print(miss,'column missing from full CYC schedule')
+        cabsched[miss]=''
+    cabsched=cabsched[myCols] # set in above preferred order
     flist=np.ndarray.tolist(cabsched.Location.unique())
     missing=[s for s in flist if s not in fields['Location'].tolist()]
     if len(missing)>0:
@@ -1242,20 +1279,23 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
     '''
     # convert date- time from extracted schedule to desired str format
     # type will generally be string (if reloaded) or timestamp (if direct from prior script)
+    ''' if already string just keep format the same, if timestamp or datetime then convert below
     if type(sched.iloc[0]['Time'])==str:
         sched.Time=pd.to_datetime(sched.Time, format='%H:%M:%S') # convert string to timestamp
-    # Then convert timestamp to datetime to desired string format
-    sched.Time=sched.Time.apply(lambda x:pd.to_datetime(x).strftime(format='%I:%M %p'))
-    if type(sched.iloc[0]['Date'])==str:
-        try:
-            sched.Date=pd.to_datetime(sched.Date, format='%m/%d/%Y')
-        except:
+        '''
+    if type(sched.iloc[0]['Time'])!=str:
+        # Then convert timestamp to datetime to desired string format
+        sched.Time=sched.Time.apply(lambda x:pd.to_datetime(x).strftime(format='%I:%M %p'))
+        if type(sched.iloc[0]['Date'])==str:
             try:
-                sched.Date=pd.to_datetime(sched.Date, format='%Y-%m-%d')
+                sched.Date=pd.to_datetime(sched.Date, format='%m/%d/%Y')
             except:
-                print('Difficulty converting date with format', type(sched.iloc[0]['Date']))
-    # convert to desired date string format
-    sched['Date']=sched['Date'].dt.strftime(date_format='%d-%b-%y')
+                try:
+                    sched.Date=pd.to_datetime(sched.Date, format='%Y-%m-%d')
+                except:
+                    print('Difficulty converting date with format', type(sched.iloc[0]['Date']))
+        # convert to desired date string format
+        sched['Date']=sched['Date'].dt.strftime(date_format='%d-%b-%y')
     choice=kwargs.get('choice','test')
     if choice=='send' or choice=='KCtest':
         smtpObj = smtplib.SMTP('smtp.gmail.com', 587) # port 587
@@ -1330,8 +1370,12 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
                 val=teamlist[i][j]
             else: # lower-case sport name for replace
                 val=teamlist[i][j].lower()
-            thisteammess=thisteammess.replace(col, textwrap.fill(val, width=100))
-            thistitle=thistitle.replace(col, val)
+            try:
+                thisteammess=thisteammess.replace(col, textwrap.fill(val, width=100))
+                thistitle=thistitle.replace(col, val)
+            except:
+                print("Problem with teamname", val)
+                continue
         # Convert thissched to string table and insert into message
         thisteammess=thisteammess.replace('$SCHEDULE', thissched.to_string(index=False, justify='left'))
         #Make and insert field table 
