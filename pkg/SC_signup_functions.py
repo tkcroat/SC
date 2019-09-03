@@ -13,7 +13,7 @@ from openpyxl import load_workbook # writing to Excel
 from PIL import Image, ImageDraw, ImageFont
 import tkinter as tk
 
-import SC_config as cnf # _OUTPUT_DIR and _INPUT_DIR
+import pkg.SC_config as cnf # _OUTPUT_DIR and _INPUT_DIR
 
 def combinephrases(mylist):
     ''' Combine list of phrases using commas & and '''
@@ -134,13 +134,13 @@ def findcards():
     '''Search ID cards folder and return player # and file link
     cards resized to 450x290 pix jpg in photoshop (scripts-image processor)
     keys are either player number as string or coach CYC ID, vals are links to files'''
-    cardlist=glob.glob('./IDcards/*.jpg', recursive=True)
+    cardlist=glob.glob('%s\\IDcards\\*.jpg' %cnf._OUTPUT_DIR, recursive=True)
     # construct list of [card #, filename]
+    nums=[i.split('\\')[-1] for i in cardlist]
+    nums=[i.split('_')[0] if '_' in i else i.split('--')[0] for i in nums ]    
     cards={} # dict for card numbers/filenames
-    for i, fname in enumerate(cardlist):
-        num=fname.split('_')[0] # coach and player IDs set off by underscore
-        num=num.split("\\")[1] 
-        cards.update({num: fname})
+    for i,num in enumerate(nums):
+        cards.update({num: cardlist[i]})
     return cards
 
 def makethiscard(IDlist, team):
@@ -215,7 +215,7 @@ def makeCYCcards(df, players, teams, coaches, season, year):
                 cardimage =makethiscard(IDlist, team) # directly saved
                 # Name and save the card file
                 filename='Cards_'+ team +'.jpg'
-                cardimage.save(filename)
+                cardimage.save(cnf._OUTPUT_DIR+'\\'+filename)
     missingcards=players[players['Plakey'].isin(missinglist)]
     missingcards=missingcards.sort_values(['Grade','Last'])
     return missingcards
@@ -1618,15 +1618,19 @@ def detectrosterchange(PMroster, myroster):
     myroster=myroster[pd.notnull(myroster['Birthdate'])]
     PMroster=PMroster[pd.notnull(PMroster['Birthdate'])]
     
+    def removeLeadZero(val):
+        if val.startswith('0'):
+            return val[1:]
+        else:
+            return val
     myroster['Birthdate']=myroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
-    # need to get rid of zero padding
-    for index, row in myroster.iterrows():
-        thisdate=row.Birthdate
-        parts=thisdate.split('/')
-        parts=[str(int(i)) for i in parts]
-        myroster=myroster.set_value(index,'Birthdate','/'.join(parts))
+    PMroster['Birthdate']=PMroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
+
+    myroster['Birthdate']=myroster['Birthdate'].apply(lambda x:removeLeadZero(x))
+    PMroster['Birthdate']=PMroster['Birthdate'].apply(lambda x:removeLeadZero(x))
 
     bothrosters=pd.concat([PMroster,myroster])
+    bothrosters=bothrosters.sort_values(['Fname','Lname'])
     # Fix date string differences
     alteredrows=bothrosters.drop_duplicates(keep=False)
     alteredrows=alteredrows.append(nanrows)
