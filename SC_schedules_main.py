@@ -12,30 +12,31 @@ import numpy as np
 
 if 'C:\\Users\\tkc\\Documents\\Python_Scripts\\SC' not in sys.path:
     sys.path.append('C:\\Users\\tkc\\Documents\\Python_Scripts\\SC')
-import SC_messaging_functions as SCmess
-import SC_schedule_functions as SCsch
+import pkg.SC_messaging_functions as SCmess
+import pkg.SC_schedule_functions as SCsch
+import pkg.SC_config as cnf # specifies input/output file directories
 #%%
 from importlib import reload
 reload(SCsch)
+reload(SCmess)
 #%%
 
-os.chdir('C:\\Users\\kevin\\Documents\\Python_Scripts\\SC')
+os.chdir('C:\\Users\\kevin\\Documents\\Sponsors_Club\\Schedules')
 
 # Read tentative google drive Pat Moore schedules (after delete of cols before header row)
 allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
+allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
 
 sched=pd.read_excel('C:\\Temp\\allTeams.xlsx')
+fullsched=pd.read_excel('CYC_soccer_2019.xlsx')
 
 # Load full schedule (Pat moore excel format)
-sched=pd.read_excel('AllTeams_soccer_schedule_30Aug18.xlsx')
-sched=pd.read_csv('AllTeams_CYC_soccer_schedule_Aug18.csv')
-sched=SCsch.prepGdSchedule(sched, teams, sport)
-sched=prepGdSchedule(allteams)
-
-sched=prepGdSchedule(sched)
-sched.to_csv('Cab_bball_schedule_24Dec18.csv', index=False)
+fullsched=pd.read_excel('AllTeams_soccer_schedule_30Aug18.xlsx')
+fullsched=pd.read_csv('AllTeams_CYC_soccer_schedule_Aug18.csv')
+fullsched=SCsch.prepGdSchedule(fullsched, teams, 'Soccer')
 
 # Find changed schedules, return altered games
+sched=SCsch.loadSchedule()  # Reload existing Cabrini-only schedule (post-processing)
 sched=pd.read_csv('Cab_soccer_schedule_30Aug18.csv')
 oldsch=pd.read_csv('Cab_soccer_schedule_26Aug18.csv')
 changed=SCsch.compareSched(sched, oldsch)
@@ -46,11 +47,16 @@ sched=pd.read_csv('Cab_Bball_schedule_24Dec18.csv')
 sched=pd.read_csv('Cabrini_2017_VB_soccer_schedule.csv')
 sched2=pd.read_csv('Cabrini_VB2017_schedule.csv')
 
-# load Cabrini team set 
+# Load Cabrini team set 
 teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
+teams=pd.read_csv(cnf._INPUT_DIR+'\\teams_2019.csv', encoding='cp437')
 coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-fields=pd.read_excel('Teams_coaches.xlsx', sheetname='Fields')
+coaches=pd.read_csv(cnf._INPUT_DIR+'\\coaches.csv', encoding='cp437')
+fields=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Fields')
+fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv', encoding='cp437')
+
 Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437') 
+fields.to_csv(cnf._INPUT_DIR+'fields.csv', index=False)
 
 season='Winter'
 year=2018
@@ -63,8 +69,7 @@ kwargs.update({'school':'Cabrini'}) # get cabrini schedules by school
 kwargs.update({'sport':'Soccer'}) 
 kwargs.update({'sport':'VB'}) 
 cabsched=SCmess.getcabsch(fullsched, teams, coaches, fields, **kwargs)
-sched=getcabsch(fullsched, teams, coaches, fields, **kwargs)
-sched.to_csv('Cab_Bball2018_schedule_24Dec18.csv', index=False) # save (used for sendschedule, maketextsch, gcal, etc.)
+cabsched.to_csv(cnf._OUTPUT_DIR + '\\Cab_Soccer2019_schedule_1Sep19.csv', index=False) # save (used for sendschedule, maketextsch, gcal, etc.)
 
 # Compare schedule to previous and return altered rows
 
@@ -74,7 +79,7 @@ kwargs={}
 kwargs.update({'splitcal':False}) # single jumbo calendar option 
 kwargs.update({'school':'Cabrini'}) # Cabrini teams only
 kwargs.update({'division':'6B'})
-SCmess.makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
+SCmess.makegcals(cabsched, teams, coaches, fields, season, year, duration=1, **kwargs)
 
 makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
 

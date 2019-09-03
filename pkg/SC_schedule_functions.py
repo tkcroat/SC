@@ -7,6 +7,29 @@ Created on Thu Jun 22 06:46:15 2017
 import pandas as pd
 import re
 from datetime import datetime
+import tkinter as tk
+
+def writeCabSchedule(sched):
+    '''
+    Convert date format to correct string and save as csv
+    '''
+    def convDate(val):
+        try:
+            return val.strftime('%m/%d/%Y')
+        except:
+            return None
+    sched['Date']=sched['Date'].apply(lambda x:convDate(x))
+    def askSavename(sched):
+        # save as via pop-up
+        root=tk.Tk() # creates pop-up window
+        root.update() # necessary to close tk dialog after askopenfilename is finished
+        # tk dialog asks for a single station file
+        full_path = tk.filedialog.asksaveasfile(title = 'Save schedule',
+                                filetypes=[ ('csv','*.csv')] )
+        root.destroy() # closes pop up window
+        return full_path
+        
+    return
 
 def convertDts(sched):
     '''
@@ -14,6 +37,31 @@ def convertDts(sched):
     '''
     # sometimes imports as 10/30/2018 0:00
     sched['Date']=sched['Date'].str.split(' ').str[0]
+    # TODO finish me
+    return 
+
+def loadSchedule():
+    ''' Choose schedule file and open
+    '''
+    def get_file_path():
+        '''
+        Popup dialog box to find db path if non-standard
+        '''
+        root=tk.Tk() # creates pop-up window
+        root.update() # necessary to close tk dialog after askopenfilename is finished
+        # tk dialog asks for a single station file
+        full_path = tk.filedialog.askopenfilename(title = 'Choose schedule name',
+                                filetypes=[ ('XLS','*.xls*'), ('csv','*.csv')] )
+        root.destroy() # closes pop up window
+        return full_path
+    myPath = get_file_path()
+    if myPath.endswith('.csv'):
+        sched=pd.read_csv(myPath, encoding='cp437')
+    elif myPath.endswith('.xls) or myPath.endswith('.xlsx):
+        sched=pd.read_excel(myPath)
+    else:
+        print('Schedule file must be CSV or Excel')
+    return sched
 
 def compareSched(sched, oldsch):
     '''
@@ -71,10 +119,6 @@ def getTeamDicts(teams, sport):
             else:
                 print('Gend problem for', gr, gend)
     return teamdivdict, coachdict
-                
-
-    
-    
 
 def prepGdSchedule(sched, teams, sport):
     '''
@@ -85,21 +129,26 @@ def prepGdSchedule(sched, teams, sport):
     
     #sched.columns=['Gamenum','Visitor', 'Vis', 'Home', 'Home2', 'Date','Time', 'Venue','Ven','Days']
     if len(sched.columns)==10:
-        sched.columns=['Gamenumber','Away', 'Vis', 'Home', 'Home2', 'Date','Time', 'Location','Ven','Days']
+        sched.columns=['GameNum','Away', 'Vis', 'Home', 'Home2', 'Date','Time', 'Location','Ven','Days']
     elif len(sched.columns)==9:
-        sched.columns=['Gamenumber','Away', 'Vis', 'Home', 'Home2', 'Date','Time', 'Location','Ven']
+        sched.columns=['GameNum','Away', 'Vis', 'Home', 'Home2', 'Date','Time', 'Location','Ven']
+    elif len(sched.columns)==13: # 8/2019 Pat Moore structure
+        sched.columns=['GameNum','Date','Time','Day','Home','Away','Location','HScore','VScore', 'Division','Status','Assignments','Notes']
     else:
         print('Examine for new column structure')
         return
+    # Filter for Cabrini teams only
     sched=sched[sched['Home'].str.contains('Cabrini') | sched['Away'].str.contains('Cabrini') ]
+    ''' no longer needed w/ new division column 
     sched['Division']=''
+    # Find division from within name field
     for index, row in sched.iterrows():
         if re.match('\d{1}\w{2}',row.Vis):
             sched.loc[index]['Division']=re.match('\d{1}\w{2}',row.Vis).group(0)
             # sched=sched.set_value(index, 'Div', re.match('\d{1}\w{2}',row.Vis).group(0) )
-    # Find team name (from division)... 
-    # Needed because all schedule games listed under both teams
+    # Needed because all schedule games listed under both teams (no longer true)
     sched=sched.drop_duplicates(['Date','Time','Vis','Home2'])
+    '''
     # Sorting by date requires datetime
     # TESTING val=sched.iloc[0]['Date']  datetime.strptime(val, '%m/%d/%Y')
     if isinstance(sched.iloc[0]['Date'],str):
@@ -113,21 +162,27 @@ def prepGdSchedule(sched, teams, sport):
     # lookup of cabrini teams from division and/or coach name
     teamdivdict, coachdict=getTeamDicts(teams, sport)
     # Find day of week from date
-    sched['Day']=''
     sched['Team']=''
-    days=['Mon','Tues','Wed','Thurs','Fri','Sat','Sun']
-    for index, row in sched.iterrows():
-        # keep only grade/gender
-        divval=row.Division[0:2]
-        if divval in teamdivdict:
-            sched.loc[index]['Team']=teamdivdict.get(divval)
-        else:
-            print("Couldn't find team for div", divval)
-        # Get weekday
-        sched.loc[index]['Day']=days[row.Date.weekday()]
-
+    
+    def setWeekDay(val):
+        # determine day of week from date
+        days=['Mon','Tues','Wed','Thurs','Fri','Sat','Sun'] # day order for .weekday()
+        try:
+            return days[val.weekday()]
+        except:
+            return ''
+    sched['Day']=sched['Date'].apply(lambda x:setWeekDay(x))
+    def setTeam(div):
+        # Set Team column to match Cabrini team name (used by SC_messaging)
+        # div will be "2BD" but teamdict match for Cabrini teams is "2B"
+        try:
+            if div[0:2] in teamdivdict:
+                return teamdivdict.get(div[0:2])
+            else:
+                return ''
+        except:
+            print('Problem setting Cabrini team name')
+    sched['Team']=sched['Division'].apply(lambda x:setTeam(x))
     sched=sched[['Date','Day','Time','Home','Away','Division','Location','Team']]
-    #TODO need to make Cabrini team column matching teams xls file
-    # currently doing this manually
     return sched
 
