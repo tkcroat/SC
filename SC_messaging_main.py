@@ -11,7 +11,7 @@ if 'C:\\Users\\tkc\\Documents\\Python_Scripts\\SC' not in sys.path:
     print ('SC folder added')
 import pkg.SC_signup_functions as SC
 import pkg.SC_messaging_functions as SCmess
-
+import pkg.SC_config as cnf # specifies input/output file directories
 #%%
 from importlib import reload
 reload(SCmess)
@@ -23,9 +23,10 @@ signupfile='Spring2017_signups.xlsx'
 signupfile='Fall2018_signups.xlsx'
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates
 players, famcontact, SCsignup, season, year = SC.loadprocessfiles(signupfile)
-teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
-coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-Mastersignups = pd.read_csv('private\\master_signups.csv', encoding='cp437') 
+teams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Teams')
+teams=pd.read_csv(cnf._INPUT_DIR+'\\Teams_2019.csv', encoding='cp437')
+coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
+Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437') 
 # Teams folder under each season? 
 gdrivedict={
     '$GDRIVEWINTER':'https://drive.google.com/open?id=0B9k6lJXBTjfiLVFBMlN1aWpoSEk',

@@ -16,6 +16,7 @@ reload(cnf)
 #%% Load and process raw signup file from Fall2016_signups.xlsx
 # raw tab contains unprocessed google drive signups plus selected info from paper
 os.chdir('C:\\Users\\kevin\\Documents\\Python_Scripts\\SC\\')
+os.chdir(cnf._OUTPUT_DIR)
 signupfile='Winter2017_signups.xlsx'
 signupfile='Spring2017_signups.xlsx'
 signupfile='Fall2018_signups.xlsx'
@@ -31,6 +32,7 @@ SCsignup, players, famcontact =SC.findplayers(SCsignup, players, famcontact)
 
 # Save SC signups back to xls file (incl. altered names)
 SC.writetoxls(SCsignup,'Raw', signupfile)
+os.chdir(cnf._INPUT_DIR)
 SCsignup.to_csv(signupfile,index=False) # csv version
 
 # Update missing info for manually entered players (no full google drive entry info)
@@ -44,18 +46,19 @@ players, famcontact=SC.processdatachanges(SCsignup, players, famcontact, year)
 players, famcontact=processdatachanges(SCsignup, players, famcontact, year)
 
 # load Mastersignups and add signups to master signups list (duplicates eliminated so no danger with re-run)
-Mastersignups = pd.read_csv('private\\master_signups.csv', encoding='cp437') 
+Mastersignups = pd.read_csv(cnf._INPUT_DIR +'\\\master_signups.csv', encoding='cp437') 
 Mastersignups = SC.createsignups(SCsignup, Mastersignups, season, year) # new signups are auto-saved
 
 # Summarize signups by sport-gender-grade (written into signup file)
+# TODO fix... redirect to output_dir
 SC.summarizesignups(Mastersignups, season, year, signupfile)
 SC.summarizesignups(Mastersignups, season, year, signupfile, **{'saveCSV':True}) # save to season_yr_signup_summary.csv (not Excel)
 
 # Manually create desired teams in Teams_coaches.xlsx (teams tab should only have this sport season not older teams)
 teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
-teams=pd.read_csv('private\\Teams_2019.csv', encoding='cp437')
+teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
 coaches=pd.read_excel('private\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-coaches=pd.read_csv('private\\coaches.csv', encoding='cp437') # common excel file encoding
+coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
 
 coaches.to_csv('coaches.csv', index=False)
 
@@ -73,7 +76,7 @@ Mastersignups=assigntoteams(Mastersignups, season, year, teams, overwrite=False)
 temp=Mastersignups[(Mastersignups['Year']==2017) & (Mastersignups['Sport']=='Track')]
 # Track sub-team assigned based on DOB calculation (TEAM ASSIGNMENTS NOT AUTOSAVED)
 Mastersignups=SC.assigntrackgroup(Mastersignups, year, players)
-Mastersignups.to_csv('private\\master_signups.csv',index=False)
+Mastersignups.to_csv(cnf._INPUT_DIR + '\\master_signups.csv',index=False)
 
 # if any players are playing up at different grade, just manually change team name in master_signups.csv (and use overwrite False)
 # also manually edit select players to open status
@@ -94,7 +97,7 @@ teams=SC.countteamplayers(Mastersignups, teams, season, year) # summarizes playe
 Mastersignups.to_csv('master_signups.csv', index=False)
 
 # Create 5 separate rosters (Cabrini CYC soccer & VB, soccer & VB transfers, junior teams (incl. age) incl. coaches
-acronyms=pd.read_csv('acronyms.csv') # parish and school acronyms
+acronyms=pd.read_csv(cnf._INPUT_DIR+'\\acronyms.csv') # parish and school acronyms
 SC.createrosters(Mastersignups, season, year, players, teams, coaches, famcontact, acronyms)
 # Create contact lists for each team's coach
 
@@ -126,11 +129,11 @@ SC.maketrackroster(Mastersignups, players, year)
 # rename team in teams_coaches, mastersignups, 
 
 # Detect any roster changes made by Pat Moore
-myroster=pd.read_csv('Cabrini_Basketballroster2017.csv',encoding='cp437')
-PMroster=pd.read_csv('C:\Temp\Cabrini_Basketballroster2017_PM.csv',encoding='cp437')
+myroster=pd.read_csv('Cabrini_Soccerroster2019.csv',encoding='cp437')
+PMroster=pd.read_csv('Cabrini_Soccerroster2019_PM.csv',encoding='cp437')
 
-myroster=pd.read_csv('Cabrini_soccerroster2018.csv',encoding='cp437')
-PMroster=pd.read_csv('C:\Temp\Cabrini_Soccerroster2018_PM.csv',encoding='cp437')
+myroster=pd.read_csv('Cabrini_VBroster2019.csv',encoding='cp437')
+PMroster=pd.read_csv('Cabrini_VBroster2019_PM.csv',encoding='cp437')
 
 alteredrows=SC.detectrosterchange(PMroster,myroster)
 alteredrows.to_csv('changed_players.csv', index=False)
