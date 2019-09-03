@@ -28,6 +28,29 @@ import sys
 # TODO interface directly w/ google form
 # TODO smarter file rename tool
 
+def loadSchedule():
+	''' Choose schedule file and open
+	'''
+	def get_file_path():
+        '''
+        Popup dialog box to find db path if non-standard
+        '''
+        root=tk.Tk() # creates pop-up window
+        root.update() # necessary to close tk dialog after askopenfilename is finished
+        # tk dialog asks for a single station file
+        full_path = tk.filedialog.askopenfilename(title = 'Choose schedule name',
+                                filetypes=[ ('XLS','*.xls*'), ('csv','*.csv')] )
+        root.destroy() # closes pop up window
+        return full_path
+	myPath = get_file_path()
+	if myPath.endswith('.csv'):
+		sched=pd.read_csv(myPath, , encoding='cp437')
+	elif myPath.endswith('.xls) or myPath.endswith('.xlsx):
+		sched=pd.read_excel(myPath)
+	else:
+		print('Schedule file must be CSV or Excel')
+	return sched
+	
 def openSmtpObj():
     '''
     Open and return smtp connection for gmail send
