@@ -22,7 +22,7 @@ from pkg.SC_signup_functions import findcards
 from openpyxl import load_workbook
 import pkg.SC_config as cnf
 
-def emailparent_tk(teams, signupfile, season, year):
+def emailparent_tk(teams, season, year):
     ''' Inteface for non-billing email messages to parents (non-generic)
     Message types include:
         recruit - specific inquiry about player from last year not yet signed up; needs signupfile w/ recruits tab
@@ -33,6 +33,11 @@ def emailparent_tk(teams, signupfile, season, year):
         other -- Generic single all team+coaches message (can have $SCHOOL, $GRADERANGE,$COACHINFO, $SPORT, $PLAYERLIST) 
     8/9/17  works for team assignments
     TODO test recruit, missing unis, unireturn
+    
+    args:
+        teams - df w/ active teams
+        season -'Winter', 'Fall' or 'Spring'
+        year - starting sport year i.e. 2019 for 2019-20 school year
     '''
 #%%
     # first print out existing info in various lines
@@ -309,21 +314,16 @@ def emailparent_tk(teams, signupfile, season, year):
                 famcontact= pd.read_csv(cnf._INPUT_DIR+'\\family_contact.csv', encoding='cp437')
             except:
                 print('Problem loading family contacts')
-            try: # recruits stored in excel
-                Recruits=pd.read_excel(signupfile, sheetname='Recruits')
-                print('Loaded possible recruits from Excel file')
+            try: # Recruits stored in CSV 
+                Recruits=pd.read_csv(cnf._OUTPUT_DIR+'\\%s%s_recruits.csv' %(season, year))
+                print('Loaded possible recruits from csv file')
             except:
-                print("can't load excel recruits... trying csv")
-                try: # Recruits stored in CSV 
-                    Recruits=pd.read_csv(cnf._OUTPUT_DIR+'\\%s%s_recruits.csv' %(season, year))
-                    print('Loaded possible recruits from csv file')
-                except:
-                    fname=filedialog.askopenfilename(title='Select recruits file.')
-                    if fname.endswith('.csv'): # final move is query for file
-                        Recruits=pd.read_csv(fname)
-                    else:
-                        print('Recruits file needed in csv format.')
-                    return
+                fname=filedialog.askopenfilename(title='Select recruits file.')
+                if fname.endswith('.csv'): # final move is query for file
+                    Recruits=pd.read_csv(fname)
+                else:
+                    print('Recruits file needed in csv format.')
+                return
             emailrecruits(Recruits, famcontact, emailtitle, messagefile, **kwargs)
             
         if mtype.get()=='Assign':

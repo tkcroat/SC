@@ -39,7 +39,7 @@ gdrivedict={
     
 '''
 
-SCmess.emailparent_tk(teams, signupfile, season, year)
+SCmess.emailparent_tk(teams, season, year)
 
 # testing ssl connections/ troubleshooting
 from urllib.request import urlopen

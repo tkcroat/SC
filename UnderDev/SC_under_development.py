@@ -15,7 +15,7 @@ import csv
 import glob
 import tkinter as tk
 import numpy as np
-from SC_signup_functions import findcards
+from pkg.SC_signup_functions import findcards
 from email.mime.text import MIMEText
 import os
 
@@ -24,9 +24,20 @@ import re
 import flask
 
 import sys
+from datetime import datetime
+#%% Vectorized version of find players
+
+
+#%%
 
 # TODO interface directly w/ google form
 # TODO smarter file rename tool
+
+Temp=players['DOB']
+
+
+players.to_csv('players.csv',index=False)
+
 
 def loadSchedule():
 	''' Choose schedule file and open
@@ -321,6 +332,7 @@ def assigntoteams(df, season, year, teams, overwrite=False):
     Teamsmult, Twoteams=makemultiteam(teams) # makes duplicates team entries to match both grades
     # Compare grades as ints with K=0 
     df.Grade=df.Grade.replace('K','0', regex=True) # convert Ks to zeros
+    df=df[pd.notnull(df['Grade'])] # shouldn't happen
     df['Grade']=df['Grade'].astype('int')
     Teamsmult['Grade']=Teamsmult['Grade'].astype('int') # ensure these are ints
     # First deal with gender, grade, sport w/ multiple team options (twoteams)

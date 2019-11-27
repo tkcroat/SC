@@ -10,8 +10,6 @@ import datetime
 import sys
 import numpy as np
 
-if 'C:\\Users\\tkc\\Documents\\Python_Scripts\\SC' not in sys.path:
-    sys.path.append('C:\\Users\\tkc\\Documents\\Python_Scripts\\SC')
 import pkg.SC_messaging_functions as SCmess
 import pkg.SC_schedule_functions as SCsch
 import pkg.SC_config as cnf # specifies input/output file directories
@@ -31,8 +29,8 @@ sched=pd.read_excel('C:\\Temp\\allTeams.xlsx')
 fullsched=pd.read_excel('CYC_soccer_2019.xlsx')
 
 # Load full schedule (Pat moore excel format)
-fullsched=pd.read_excel('AllTeams_soccer_schedule_30Aug18.xlsx')
-fullsched=pd.read_csv('AllTeams_CYC_soccer_schedule_Aug18.csv')
+fullsched=pd.read_excel('Soccer2019 By League.xlsx')
+fullsched=pd.read_csv('Soccer.csv')
 fullsched=SCsch.prepGdSchedule(fullsched, teams, 'Soccer')
 
 # Find changed schedules, return altered games
@@ -58,8 +56,8 @@ fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv', encoding='cp437')
 Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437') 
 fields.to_csv(cnf._INPUT_DIR+'fields.csv', index=False)
 
-season='Winter'
-year=2018
+season='Fall'
+year=2019
 # load old teams
 
 # Get subset of full schedule for Cabrini teams (and Cab transfer teams)
@@ -85,11 +83,11 @@ makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
 
 # make game cards from given schedule
 sched=pd.read_csv('Cab_soccer_schedule_23Aug18.csv') # reload
-gctemplate='game_card_soccer_template.xlsx' # for soccer
+gctemplate=cnf._INPUT_DIR+'\\game_card_soccer_template.xlsx' # for soccer
 gctemplate='game_card_VB_template.xlsx'
 gctemplate='game_card_bball_template.xlsx' # for soccer
 
-pastelist=pd.read_excel('excel_python_insert_template.xlsx', sheet_name=1) # currently same for soccer and VB
+pastelist=pd.read_excel(cnf._INPUT_DIR+'\\excel_python_insert_template.xlsx', sheet_name=1) # currently same for soccer and VB
 pastelist=pd.read_excel('excel_python_insert_template.xlsx', sheet_name='bball')
 SCmess.gamecardmaker(teams, coaches, Mastersignups, sched, pastelist, gctemplate)
 

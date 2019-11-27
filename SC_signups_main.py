@@ -9,6 +9,10 @@ import pandas as pd
 import os
 import pkg.SC_signup_functions as SC
 import pkg.SC_config as cnf
+import pkg.SC_signup_google_API_functions as SCapi
+
+from pandas_ods_reader import read_ods
+
 #%%
 from importlib import reload
 reload(SC)
@@ -24,12 +28,24 @@ signupfile=cnf._INPUT_DIR +'\\Fall2019_signups.csv'
 signupfile=cnf._INPUT_DIR +'\\Fall2019_signups.xlsx'
 
 
+#%% Testing new google sheets API download
+# ID and range of Winter 2019 basketball
+sheetID = '182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g'
+rangeName = 'Form Responses 1!A:AB'
+
+gsignups = SCapi.downloadSignups(sheetID, rangeName)
+season='Winter'
+year=2019
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates
-players, famcontact, SCsignup, season, year = SC.loadprocessfiles(signupfile)
+players, famcontact, gsignups = SC.loadProcessGfiles(gsignups, season, year)
+
+#%%
 
 # Find player number and assign to signup rows
-SCsignup, players, famcontact =SC.findplayers(SCsignup, players, famcontact)
-
+# SCsignup, players, famcontact =SC.findplayers(SCsignup, players, famcontact)
+# test w/ gsignups
+gsignups, players, famcontact =SC.findplayers(gsignups, players, famcontact, year)
+    
 # Save SC signups back to xls file (incl. altered names)
 SC.writetoxls(SCsignup,'Raw', signupfile)
 os.chdir(cnf._INPUT_DIR)
@@ -47,18 +63,26 @@ players, famcontact=processdatachanges(SCsignup, players, famcontact, year)
 
 # load Mastersignups and add signups to master signups list (duplicates eliminated so no danger with re-run)
 Mastersignups = pd.read_csv(cnf._INPUT_DIR +'\\\master_signups.csv', encoding='cp437') 
-Mastersignups = SC.createsignups(SCsignup, Mastersignups, season, year) # new signups are auto-saved
+Mastersignups = SC.createsignups(gsignups, Mastersignups, season, year) # new signups are auto-saved
 
 # Summarize signups by sport-gender-grade (written into signup file)
 # TODO fix... redirect to output_dir
-SC.summarizesignups(Mastersignups, season, year, signupfile)
-SC.summarizesignups(Mastersignups, season, year, signupfile, **{'saveCSV':True}) # save to season_yr_signup_summary.csv (not Excel)
+SC.summarizesignups(Mastersignups, season, year, **{'XLSpath':signupfile}) # write to tab in excel signup file
+SC.summarizesignups(Mastersignups, season, year, **{'saveCSV':True}) # save to season_yr_signup_summary.csv (not Excel)
+# gsignups version
+sportsumm=SC.summarizesignups(gsignups, season, year, **{'toDf':True})
+SC.summarizesignups(gsignups, season, year) # save to csv
+SC.summarizesignups(gsignups, season, year, **{'XLSpath':signupfile}) # save to sheet in xls signup
+
 
 # Manually create desired teams in Teams_coaches.xlsx (teams tab should only have this sport season not older teams)
-teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
-teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
-coaches=pd.read_excel('private\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
+teams = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Teams') # read ods team file
+#teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
+#teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams') # 
+
+coaches = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Coaches') # read ods team file
+#coaches=pd.read_excel('private\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
+#coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
 
 coaches.to_csv('coaches.csv', index=False)
 
@@ -129,8 +153,8 @@ SC.maketrackroster(Mastersignups, players, year)
 # rename team in teams_coaches, mastersignups, 
 
 # Detect any roster changes made by Pat Moore
-myroster=pd.read_csv('Cabrini_Soccerroster2019.csv',encoding='cp437')
-PMroster=pd.read_csv('Cabrini_Soccerroster2019_PM.csv',encoding='cp437')
+myroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Cabrini_Soccerroster2019.csv',encoding='cp437')
+PMroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Rosters\\Cabrini_Soccerroster2019_PM.csv',encoding='cp437')
 
 myroster=pd.read_csv('Cabrini_VBroster2019.csv',encoding='cp437')
 PMroster=pd.read_csv('Cabrini_VBroster2019_PM.csv',encoding='cp437')
@@ -143,3 +167,6 @@ test=alteredrows[alteredrows['Lname']=='Chavez']
 # Make CYC card images for 3rd and up teams
 missingcards=SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year)
 missingcards=makeCYCcards(Mastersignups, players, teams, coaches, season, year)
+
+missing = SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year) # only good cards
+missing = SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year, **{'showmissing':True} )
