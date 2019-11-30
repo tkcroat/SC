@@ -51,8 +51,10 @@ SC.writetoxls(SCsignup,'Raw', signupfile)
 os.chdir(cnf._INPUT_DIR)
 SCsignup.to_csv(signupfile,index=False) # csv version
 
+#TODO save method back to google signups? 
+
 # Update missing info for manually entered players (no full google drive entry info)
-SCsignup = SC.findmissinginfo(SCsignup, players, famcontact)
+SCsignup = SC.findmissinginfo(gsignups, players, famcontact)
 SCsignup = findmissinginfo(SCsignup, players, famcontact)
 
 #%% Process data changes from google drive info... works but check/correct using log
@@ -76,6 +78,7 @@ SC.summarizesignups(gsignups, season, year, **{'XLSpath':signupfile}) # save to 
 
 
 # Manually create desired teams in Teams_coaches.xlsx (teams tab should only have this sport season not older teams)
+# TODO really slow... find a replacement method for .ods reads
 teams = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Teams') # read ods team file
 #teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
 #teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams') # 
@@ -126,7 +129,7 @@ SC.createrosters(Mastersignups, season, year, players, teams, coaches, famcontac
 # Create contact lists for each team's coach
 
 # Package transferred player info and create email messages to other directors/schools
-messfile='messages\\player_transfer_director.txt'
+messfile=cnf._INPUT_DIR+'\\messages\\player_transfer_director.txt'
 SC.packagetransfers(teams, Mastersignups, famcontact, players, season, year, acronyms, messfile)
 
 # Load transfers from other schools

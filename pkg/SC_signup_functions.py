@@ -66,7 +66,19 @@ def loadtransfers(df, SCsignup):
 
 def packagetransfers(teams, Mastersignups, famcontact, players, season, year, acronyms, messfile):
     ''' Package roster and contact info by sport- school and save as separate xls files 
-    also generate customized e-mails in single log file (for cut and paste send to appropriate persons)'''
+    also generate customized e-mails in single log file (for cut and paste send to appropriate persons)
+    args:
+        teams - loaded team list
+        mastersignups - signups w/ team assignment
+        players -player DB
+        famcontact - family contact db
+        season - Fall, Winter or Spring
+        year - starting sports year (i.e. 2019 for 2019-20 school year)
+        acronyms -  school/parish specific abbreviations
+        messfile - e-mail message template w/ blanks
+    returns:
+        
+    '''
     teams=teams[pd.notnull(teams['Team'])]
     transferteams=np.ndarray.tolist(teams[teams['Team'].str.contains('#')].Team.unique())
     transSU=Mastersignups[Mastersignups['Team'].isin(transferteams)]
@@ -94,7 +106,7 @@ def packagetransfers(teams, Mastersignups, famcontact, players, season, year, ac
     grouped=transSU.groupby(['Sport','Transchool'])
     for [sport, school], group in grouped:
         # prepare roster tab
-        xlsname='Cabrini_to_'+school+'_'+sport+'_'+str(year)+'.xlsx'
+        xlsname=cnf._OUTPUT_DIR+'\\Cabrini_to_'+school+'_'+sport+'_'+str(year)+'.xlsx'
         writer=pd.ExcelWriter(xlsname, engine='openpyxl')
         Transferroster=organizeroster(group)
         Transferroster=Transferroster.sort_values(['Team', 'Sex', 'Grade'], ascending=True)
@@ -1318,13 +1330,20 @@ def splitcoaches(df):
 
 def addcoachestoroster(teams, coaches):
     '''Creates roster entries for coaches for each CYC team
-    pass teams and coaches (with coach roster info)'''
+    pass teams and coaches (with coach roster info)
+    needed roster cols are all below (except sport used in output parsing)
+    args: teams -- team table w/ head and asst coach CYC ids 
+        coaches - coaches table with CYC Id (key) and associated info
+    returns: coachroster --separate df to be appended to main player roster
+        '''
     # Add team coaches (match by CYC-IDs)
     thismask = teams['Team'].str.contains('-', case=False, na=False) # finds this season's CYC level teams
     CYCcoach=teams.loc[thismask] # also has associated sport
     CYCcoach=splitcoaches(CYCcoach) # makes new row for all assistant coaches on CYC teams
     CYCcoach=pd.merge(CYCcoach, coaches, how='left', on=['Coach ID'], suffixes=('','_r')) 
     mycols=['Sport','Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Open/Closed','Coach ID']
+    for col in [col for col in mycols if col not in CYCcoach.columns]:
+        CYCcoach[col]='' # birthdate generally missing
     CYCcoach=CYCcoach[mycols] # put back in desired order
     # drop duplicates on CYC ID, team (sometimes occurs during merge)
     CYCcoach=CYCcoach.drop_duplicates(['Coach ID','Team']) 
@@ -1554,7 +1573,10 @@ def replaceacro(df, acronyms):
 def createrosters(df, season, year, players, teams, coaches, famcontact, acronyms):
     ''' From Mastersignups of this season creates Cabrini CYC roster and transfers (for separate sports)
     and all junior sports (calculates ages for Judge Dowd);  pulls info merged from famcontact, players, teams, and coaches
-    teams should already be assigned using teams xls and assigntoteams function'''  
+    teams should already be assigned using teams xls and assigntoteams function
+    
+    returns:  None ... direct save to OUTPUT_DIR
+        '''  
     sportsdict={'Fall':['VB','Soccer'], 'Winter':['Basketball'],'Spring':['Track','Softball','Baseball','T-ball']}
     specials=['Chess','Track']
     sports=sportsdict.get(season)
