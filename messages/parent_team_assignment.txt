@@ -1,9 +1,0 @@
-Your child $FIRST $LAST has been assigned to the $SCHOOL $GRADERANGE $SPORT team coached by $COACH.  
-You will be contacted soon with game and practice schedules. Please inform us via e-mail if your child 
-no longer wants to play.
-Players on this team include: 
-$PLAYERLIST
-
-$RECRUIT
-
-$CYCCARD

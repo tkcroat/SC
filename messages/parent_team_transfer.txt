@@ -1,7 +1,0 @@
-Cabrini did not enough players for an independent team, so your child $FIRST $LAST has been assigned to the $SCHOOL 
-$GRADERANGE $SPORT team.  You will be contacted soon with game and practice schedules. Please inform us 
-via e-mail if your child no longer wants to play on this team.
-
-Players on this team include: $PLAYERLIST
-
-$CYCCARD
