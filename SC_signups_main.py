@@ -11,7 +11,7 @@ import pkg.SC_signup_functions as SC
 import pkg.SC_config as cnf
 import pkg.SC_signup_google_API_functions as SCapi
 
-from pandas_ods_reader import read_ods
+# /from pandas_ods_reader import read_ods # too slow
 
 #%%
 from importlib import reload
@@ -31,7 +31,7 @@ signupfile=cnf._INPUT_DIR +'\\Fall2019_signups.xlsx'
 #%% Testing new google sheets API download
 # ID and range of Winter 2019 basketball
 sheetID = '182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g'
-rangeName = 'Form Responses 1!A:AB'
+rangeName = 'Form Responses 1!A:AC' # include plakey/famkey manual mode
 
 gsignups = SCapi.downloadSignups(sheetID, rangeName)
 season='Winter'
@@ -79,13 +79,14 @@ SC.summarizesignups(gsignups, season, year, **{'XLSpath':signupfile}) # save to 
 
 # Manually create desired teams in Teams_coaches.xlsx (teams tab should only have this sport season not older teams)
 # TODO really slow... find a replacement method for .ods reads
-teams = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Teams') # read ods team file
-#teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
+teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
 #teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams') # 
+# teams = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Teams') # read ods team file
 
-coaches = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Coaches') # read ods team file
+
+#coaches = read_ods(cnf._INPUT_DIR +'\\Teams_coaches.ods', 'Coaches') # read ods team file
 #coaches=pd.read_excel('private\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-#coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
+coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
 
 coaches.to_csv('coaches.csv', index=False)
 
