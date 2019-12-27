@@ -410,6 +410,26 @@ def loadProcessGfiles(gsignups, season, year):
     outputduplicates(gsignups) # quick check of duplicates output in console window (already removed from SCsignup)
     gsignups=formatnamesnumbers(gsignups) # format phone numbers, names to title case, standardize schools, etc.
     famcontact=formatnamesnumbers(famcontact)
+    
+    def processGkey(val):
+        ''' Some plakey/famkey copied to drive... must convert nan(float), whitespace or 
+        number as string to either nan or int
+        '''
+        if isinstance(val, str):
+            val=''.join(val.split(' '))
+            if val=='':
+                return np.nan
+            else:
+                try:
+                    return int(val)
+                except:
+                    return np.nan
+        else:
+            return np.nan
+    # ensure gsignups has only int or nan (no whitespace)
+    gsignups['Plakey']=gsignups['Plakey'].apply(lambda x: processGkey(x))
+    gsignups['Famkey']=gsignups['Famkey'].apply(lambda x: processGkey(x))
+
     return players, famcontact, gsignups
 
 def loadprocessfiles(signupfile):
@@ -2141,22 +2161,8 @@ def findplayers(signups, players, famcontact, year):
     if not a perfect match on all characters, create some data output structure to resolve possible problems
     plakey and famkey cols added in loadprocess '''
     savepla=False # flags to save modified files
-    savefam=False
-    def processGplakey(val):
-        # convert nan(float), whitespace or number as string to either nan or int
-        if isinstance(val, str):
-            val=''.join(val.split(' '))
-            if val=='':
-                return np.nan
-            else:
-                try:
-                    return int(val)
-                except:
-                    return np.nan
-        else:
-            return np.nan
-    # ensure gsignups has only int or nan (no whitespace)
-    signups['Plakey']=signups['Plakey'].apply(lambda x: processGplakey(x))
+    savefaBm=False
+
     phonedict=makephonedict(famcontact) # dict for known phone #s to famkey
     # left merge keeping index to do first/last/dob match (works since no duplicates in players)
     matches=signups.reset_index().merge(players, how='left', on=['First','Last','DOB'], suffixes=('','_2')).set_index('index')
@@ -2411,7 +2417,6 @@ def newplayertk(Ser, phonelist, kids):
     choices={} # dict for choice return (and possibly existing player ID number)
     if mychoice=='abort':
         print('Execution aborted')
-        print(boohoo)
     elif mychoice=='ID' or mychoice=='alias':
         # ensure entered # is in list
         if int(thisplanum.get()) not in kids.Plakey.unique():

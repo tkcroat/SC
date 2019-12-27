@@ -169,8 +169,5 @@ alteredrows.to_csv('changed_players.csv', index=False)
 test=alteredrows[alteredrows['Lname']=='Chavez']
 
 # Make CYC card images for 3rd and up teams
-missingcards=SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year)
-missingcards=makeCYCcards(Mastersignups, players, teams, coaches, season, year)
-
 missing = SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year) # only good cards
 missing = SC.makeCYCcards(Mastersignups, players, teams, coaches, season, year, **{'showmissing':True} )
