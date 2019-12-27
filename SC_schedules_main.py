@@ -26,6 +26,7 @@ allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
 allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
 
 sched=pd.read_excel('C:\\Temp\\allTeams.xlsx')
+fullsched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\\BB2019_full_schedule.xlsx')
 fullsched=pd.read_excel('CYC_soccer_2019.xlsx')
 
 # Load full schedule (Pat moore excel format)
@@ -53,10 +54,10 @@ coaches=pd.read_csv(cnf._INPUT_DIR+'\\coaches.csv', encoding='cp437')
 fields=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Fields')
 fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv', encoding='cp437')
 
-Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437') 
+Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437') 
 fields.to_csv(cnf._INPUT_DIR+'fields.csv', index=False)
 
-season='Fall'
+season='Winter'
 year=2019
 # load old teams
 
@@ -67,11 +68,25 @@ kwargs.update({'school':'Cabrini'}) # get cabrini schedules by school
 kwargs.update({'sport':'Soccer'}) 
 kwargs.update({'sport':'VB'}) 
 cabsched=SCmess.getcabsch(fullsched, teams, coaches, fields, **kwargs)
-cabsched.to_csv(cnf._OUTPUT_DIR + '\\Cab_Soccer2019_schedule_1Sep19.csv', index=False) # save (used for sendschedule, maketextsch, gcal, etc.)
+cabsched.to_csv(cnf._OUTPUT_DIR + '\\Cab_Basketball2019_schedule_26Dec19.csv', index=False) # save (used for sendschedule, maketextsch, gcal, etc.)
 
 # Compare schedule to previous and return altered rows
 
+#%% CYC game rescheduler (prior to release)... swapping team opponents
+sched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\\BB2019_full_schedule.xlsx')
+sched=SCsch.prepSched(sched)
 
+teamName='St Frances Cabrini-Clavin-6GD'
+badDay=datetime(2020,1,11) # Team has two impossible to play games
+
+teamName='St Frances Cabrini-Croat-7BD1'
+badDay=datetime(2020,1,25) # Team has two impossible to play games
+
+swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, gamerank=1)
+
+swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, **{'badTime'='7:30 PM'})
+
+#%%
 # Make sports google calendars
 kwargs={}
 kwargs.update({'splitcal':False}) # single jumbo calendar option 

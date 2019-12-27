@@ -668,9 +668,8 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
         sport -- Soccer, VB or whatever
         div--- division 5G
         school  - Cabrini 
+    #TESTING sched=fullsched.copy()
     '''
-    #  8/25 adjusted for 
-    inCols=sched.columns
     if 'school' in kwargs:
         if kwargs.get('school','')=='Cabrini':
             # drop transfer teams w/ #
@@ -687,7 +686,8 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
             gender='m'
         teams=teams[(teams['Grade']==grade) & (teams['Gender']==gender)]
     # perform any team filtering 
-    sched=sched.rename(columns={'Start':'Time','Venue':'Location','Sched Name':'Division', 'Visitor':'Away'})
+    sched=sched.rename(columns={'Start':'Time','Venue':'Location','Sched Name':'Division', 
+                                'Visitor':'Away'})
     teamdict=findschteams(sched, teams, coaches)
     cabsched=pd.DataFrame()
     for key, [div, schname] in teamdict.items():
@@ -696,7 +696,9 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
             newname=schname.split('/')[0]+'-Cabrini'
             match['Home']=match['Home'].str.replace(schname,newname)
             match['Away']=match['Away'].str.replace(schname,newname)
-        match['Team']=key
+        # add team column via assign
+        match=match.assign(Team=key)
+        # Why isn't team col being copied?
         cabsched=cabsched.append(match, ignore_index=True)
         print(len(match),' games for team', str(schname))
     cabsched['Home']=cabsched['Home'].str.replace('St Frances','')
@@ -705,7 +707,7 @@ def getcabsch(sched, teams, coaches, fields, **kwargs):
     # now sort 
     myCols=['Date','Time','Day','Location','Division','Home','Away','Team']
     # add col if missing from CYC schedule
-    for miss in [i for i in myCols if i not in inCols]:
+    for miss in [i for i in myCols if i not in cabsched.columns]:
         print(miss,'column missing from full CYC schedule')
         cabsched[miss]=''
     cabsched=cabsched[myCols] # set in above preferred order

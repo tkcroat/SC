@@ -25,6 +25,250 @@ import flask
 
 import sys
 from datetime import datetime
+#%% 
+teamname='MQP-Cassat-7BD1'
+teamname='Holy Redeemer-Mehan-7BD1-F'
+teamname='Holy Redeemer-Mehan-7BD1-H'
+
+thisSched=getSchedule(sched, teamname)
+
+
+thisSched=getSchedule(sched, 'Annunciation-Handal-6GD')
+thisSched=getSchedule(sched, 'Annunciation-Handal-6GD')
+
+allTeams=list(set(list(sched.Home.unique())+list(sched.Away.unique())))
+allTeams=[]
+[i for i in allTeams if 'Mehan' in str(i)]
+
+gymsched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\BB2019_Schedule_ByGym.xlsx')
+
+thisDate=datetime(2020,3,29)
+
+avail = findGymSlot(gymsched, datetime(2020,2,2)) # Fri
+avail = findGymSlot(gymsched, datetime(2020,2,9)) # Sun
+avail = findGymSlot(gymsched, datetime(2020,2,15)) #Sun
+
+from datetime import timedelta
+
+sched['Date']=sched['Date'].apply(lambda x:convDate(x))
+
+swapGames= findTeamSwap(teamName, badDay, sched)
+
+    
+def findOpponents(teamName, badDay, sched, **kwargs):
+    ''' Finds opponent(s) on day
+    args:
+        teamName - name as string (as in schedule)
+        date - datetime of game in question (usually problematic one)
+        sched - full schedule
+    
+    returns:
+        opponents - opponents as list 
+    
+    kwargs:
+        badTime:  if only 1 game of multiples on day is a problem   
+    '''
+    # first check for proper team name (as printed in schedule)
+    allTeams=list(set(list(sched.Home.unique())+list(sched.Visitor.unique())))
+    if teamName not in allTeams:
+        print('Faulty team name not found in full schedule')
+        return
+    # Find bad game(s) in question
+    match=sched[ (sched['Date']==badDay) & ( (sched['Home']==teamName) | (sched['Visitor']==teamName)) ]
+    if 'badTime' in kwargs:
+        bt=kwargs.get('badTime')
+        # TODO make more robust using time conversion from string?  
+        match=match[match['Start']==bt]
+        if len(match)!=1:
+            print('Time matched game not found')
+            return
+    opponents = [i for i in match.Home.to_list() + match.Visitor.to_list() if i != teamName]
+    return opponents
+    
+def findTeamSwap(teamName, badDay, sched, gamerank=0, **kwargs):
+    ''' Swap team1 (with conflict) into another existing game (find opponent switching existing
+    away team)... 
+    args:
+        teamName=' Cabrini-Clavin-6GD' # name as listed on schedule not traditional league name
+        badDay=datetime(2020,1,11)
+        sched -  full game schedule    
+        gamerank -- index in list of games to choose (defaults 0 for best match)
+            used if first run unsatisfactory for some reason
+    kwargs:
+        'badTime' -- string matching single game to change (not double game).. '7:30 PM'
+    
+    returns:
+        swapOld -- original offending set of games
+        swapNew -- replacement w/ opponents rearranged
+    '''
+
+    allTeams=list(set(list(sched.Home.unique())+list(sched.Visitor.unique())))
+    league=teamName.split('-')[2][0:3]
+    leagueTeams=[i for i in allTeams if league in str(i)]
+    # Find teams w/ bye that weekend
+    weekend=sched[ (sched['Date']>badDay-timedelta(days=3)) & (sched['Date']<badDay+timedelta(days=3)) ]
+    teamInAction = list(set(list(weekend.Home.unique())+list(weekend.Visitor.unique())))
+    bestAvailTeams = [i for i in leagueTeams if i not in teamInAction]
+    # Preference for teams w/o full/half schedule 
+    bestAvailTeams = [i for i in bestAvailTeams if not i.endswith('-H')]
+    bestAvailTeams = [i for i in bestAvailTeams if not i.endswith('-F')]
+    # Find timespan of bye weekend for team1 (best swap)
+    byeWeeks=findByeWeek(teamName, sched)
+    if len(byeWeeks)==0:
+        print('No bye week... switch to allow 2nd choice')
+        # TODO add algo to find other random game 
+    # Find possible swap/replacement games in first bye week
+    swapGames=sched[ (sched['Date']>=byeWeeks[0][0]) & (sched['Date']<=byeWeeks[0][1])]
+    # Find games for best swap team candidates while ensuring original team doesn't play itself
+    swapGames=swapGames[ (swapGames['Visitor'].isin(bestAvailTeams)) & (swapGames['Home']!=teamName) ]
+    swapOld, swapNew, swapTeam = chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames, **kwargs)
+    return swapOld, swapNew, swapTeam 
+
+        
+def findAllOpponents(teamName, sched):
+    ''' Return list of all of given tea'ms opponents
+    '''
+    thisSched=sched[ (sched['Home']==teamName) | (sched['Visitor']==teamName) ]
+    opponents = [i for i in thisSched.Home.to_list() + thisSched.Visitor.to_list() if i !=teamName]
+    return opponents
+
+def findBadGames(teamName, badDay, sched, **kwargs):
+    ''' Find offending game or games
+    args:
+        teamName - name as string (as in schedule)
+        date - datetime of game in question (usually problematic one)
+        sched - full schedule    
+    kwargs:
+        'badTime' -- offensive time as string (for picking single game)
+    returns:
+        badGames- dataframes with offending game or games
+    '''
+    match=sched[ (sched['Date']==badDay) & ( (sched['Home']==teamName) | (sched['Visitor']==teamName)) ]
+    if 'badTime' in kwargs:
+        bt=kwargs.get('badTime')
+        # TODO make more robust using time conversion from string?  
+        match=match[match['Start']==bt]
+        if len(match)!=1:
+            print('Time matched game not found')
+    return match
+
+def chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames, **kwargs):
+    ''' if multiple possible swap games available, choose best swap by maximizing 
+    schedule diversity of opponents (simultaneous for both swapped teams)
+    adds large penalty (+3) for setting up 3rd game against same team
+    adds small penalty (+1) for swapping team out of one of its home games
+    args:
+        teamName - original team name w/ conflict (string)
+        badDay - date of conflicting game or games
+        bestAvailTeams - list of possible swap teams
+        gamerank - index of game to choose from ranked list (defaults 0)
+        sched - full CYC schedule
+        swapGames -- dataframe w/ possible swap/replacement games
+    kwargs:
+        'badTime' -- offensive time as string (for picking single game)
+    returns:
+        swapOld - offending set of games
+        swapNew - new game alteration to replace above
+    '''
+    # Find list of team 1 opponents (includes duplicates)
+    opponents1 = findAllOpponents(teamName, sched)
+    # opponents in original swapped game (len 2 if solving game conflict)
+    badGames = findBadGames(teamName, badDay, sched, **kwargs)
+    # Team overlap counts for each possibility
+    overlapScore={}
+    for ind, row in swapGames.iterrows():
+        for ind2, row2 in badGames.iterrows():
+            # Possible swapping team already chosen as visitor
+            ct1=opponents1.count(row.Home) # existing games against this oppo 
+            # new opponent for original swapped team will be home in swap candidate 
+            # Now find min in # of games of swap team against potential new opponents
+            oppos=findAllOpponents(row.Visitor, sched) # other opponents 
+            # Drop opponent (once) from this swap game
+            oppos.remove(row.Home)
+            # Now calculate minimum overlap w/ new opponent (from chosen badGame(s))
+            newOpp=[i for i in [row2.Home, row2.Visitor] if i !=teamName][0]
+            ct2=oppos.count(newOpp)
+            # Add large triple play penalties (already playing team twice) but allow single repeat
+            if ct1>=2:
+               ct1=5
+            if ct2>=2:
+               ct2=5
+            # add small penalty for switching original team out of its home game
+            if row2.Home==teamName:
+                ct2+=1
+            # key is indices of games to swap and name of team to swap from other game
+            overlapScore[ind, ind2, row.Visitor]= ct1+ct2
+    # Produce sorted list from dict in best to worst order
+    # Best swapping games combo will have minimum overlap score
+    bestval = min(overlapScore.values())
+    bestSwap = [key for key, val in overlapScore.items() if val ==bestval]
+    bestSwap=bestSwap[gamerank] # choice from ranked list (index 0 unless overridden
+    swapTeam=bestSwap[-1] # pull out swap team name
+    bestSwap=bestSwap[0:2] # indices of swapped games
+    swapOld = sched[sched.index.isin(bestSwap)]
+    # Also return new arrangement of games 
+    swapNew = swapOld.copy()
+    # Find/replace teamName w/ swapteam 
+    if teamName in [swapOld.iloc[0]['Home'],swapOld.iloc[0]['Visitor'] ]:
+        if teamName==swapOld.iloc[0]['Home']:
+            swapNew.at[swapOld.index[0],'Home']=swapTeam # avoids chained indexing & assignment problems
+            swapNew.at[swapOld.index[1], 'Visitor']=teamName
+        else:
+            swapNew.at[swapOld.index[0], 'Visitor']=swapTeam
+            swapNew.at[swapOld.index[1],'Visitor']=teamName
+    else:
+        if teamName==swapOld.iloc[1]['Home']:
+            swapNew.at[swapOld.index[1], 'Home']=swapTeam
+            swapNew.at[swapOld.index[0], 'Visitor']=teamName
+        else:
+            swapNew.at[swapOld.index[1], 'Visitor']=swapTeam
+            swapNew.at[swapOld.index[0], 'Visitor']=teamName
+    return swapOld, swapNew, swapTeam
+
+def findResched(team1, team2, gymsched):
+    ''' Find a date and venue for a game ... for full reschedule not swapping
+    method
+    TESTING team1='6-F-6GD-Clavin'  team2='St Peter-Long-6GD-F'
+    '''
+    league=team1.split('-')[2][0:3]
+    # Best match (open date both teams and venue)
+    bestAvails=gymsched[ gymsched['Assignments'].str.contains(league) ]
+    
+    # Could also swap games/ opponents (but don't swap home team)
+    
+def plotAvailSlots(gymsched):
+    ''' Create histogram with # of available slots by date
+    '''
+    
+
+avail7 =  gymsched[ gymsched['Assignments'].str.contains('7') & pd.isnull(gymsched['Home'])]
+allAvail=gymsched[ pd.isnull(gymsched['Home'])]
+
+
+def findGymSlot(gymsched, thisDate):
+    ''' Return empty available gym slots for given day
+    '''
+    def convDate(val):
+        try:
+            return datetime.strptime(val,'%m/%d/%Y')
+        except:
+            return val
+    gymsched['Date']=gymsched['Date'].apply(lambda x:convDate(x))            
+    avail= gymsched[ pd.isnull(gymsched['Home']) & ( gymsched['Date']== thisDate)]
+    return avail
+
+def getSchedule(sched, teamname):
+    ''' Returns full schedule for given team name 
+    args:
+        sched - full CYC schedule
+        teamname - exact unique team string
+    returns:
+        teamsched
+    '''
+    teamsched=sched[(sched['Home'].str.contains(teamname)) | (sched['Visitor'].str.contains(teamname))]
+    return teamsched
+    
+    
 #%% Vectorized version of find players
 
 

@@ -9,6 +9,69 @@ import re
 from datetime import datetime
 import tkinter as tk
 
+
+def findByeWeek(teamName, sched):
+    ''' Finds bye weekend for team
+    args:
+        teamName - str as seen in schedule
+        sched -  full dataframe w/ team schedules 
+    returns:
+        list w/ first and last day of bye weekend
+    '''
+    allDates=list(set(sched.Date.to_list()))
+    allDates=[i.to_pydatetime() for i in allDates]
+    allDates.sort()
+    # Would be best to parse into weekends 
+    sched = sched[ (pd.notnull(sched['Home'])) & (pd.notnull(sched['Visitor']))]
+    gameDates= list(sched[ (sched['Home'].str.contains(teamName)) | (sched['Visitor'].str.contains(teamName)) ].Date.to_list())
+    # Convert to datetime (from timestamp)
+    gameDates=[i.to_pydatetime() for i in gameDates]
+    offDates=[i for i in allDates if i not in gameDates]
+    byes=groupConsecutiveDates(offDates)
+    byes=[i for i in byes if isinstance(i, list)]
+    return byes
+
+def groupConsecutiveDates(dates):
+    ''' Combines team off dates into ranges for finding bye week
+    args:
+        dates -- list of datetimes 
+    TODO use itertools groupby instead?
+    returns:
+        list of dates with each item either a single datetime or a list w/ 1st and last 
+           day of break
+    '''
+    def group_consecutive(dates):
+        dates_iter = iter(sorted(set(dates)))  # de-dup and sort
+
+        run = [next(dates_iter)]
+        for d in dates_iter:
+            if (d.toordinal() - run[-1].toordinal()) == 1:  # consecutive?
+                run.append(d)
+            else:  # [start, end] of range else singleton
+                yield [run[0], run[-1]] if len(run) > 1 else run[0]
+                run = [d]
+
+        yield [run[0], run[-1]] if len(run) > 1 else run[0]
+    # vals = list(group_consecutive(dates)) if dates else False
+    # vals=[i for i in vals if isinstance(val, list)]
+    return list(group_consecutive(dates)) if dates else False
+
+def prepSched(sched):
+    ''' For Pat's CYC schedule to prepare for algorithm
+    After loading excel, prepare schedule for algorithmic searches
+    i.e. datetime conversion, strip string args, etc.
+    
+    '''
+    def convDate(val):
+        try:
+            return datetime.strptime(val,'%m/%d/%Y')
+        except:
+            return val
+    sched['Date']=sched['Date'].apply(lambda x:convDate(x))            
+    sched['Visitor']=sched['Visitor'].str.strip()
+    sched['Home']=sched['Home'].str.strip()
+    return sched
+
 def writeCabSchedule(sched):
     '''
     Convert date format to correct string and save as csv
