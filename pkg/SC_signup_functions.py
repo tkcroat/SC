@@ -7,7 +7,7 @@ SC process signups functions
 #%%
 import pandas as pd
 import numpy as np
-import datetime
+from datetime import datetime, date
 import re, glob, math
 from openpyxl import load_workbook # writing to Excel
 from PIL import Image, ImageDraw, ImageFont
@@ -39,8 +39,8 @@ def writetoxls(df, sheetname, xlsfile):
     writer.save() # saves xls file with all modified data
     return
 
-def loadtransfers(df, SCsignup):
-    ''' Load transferred players and add to SCsignup (then run player ID);
+def loadtransfers(df, signups):
+    ''' Load transferred players and add to signups (then run player ID);
     transfers added as normal players but need fake billing entries 
     '''
     df=df.rename(columns={'Fname':'First','Lname':'Last','Street':'Address','Parish':'Parish of Registration'})
@@ -53,16 +53,16 @@ def loadtransfers(df, SCsignup):
     sport=input()
     df['Sport']=sport
     df=df.dropna(subset=['First']) # remove blank rows if present
-    mycols=[col for col in df if col in SCsignup]
+    mycols=[col for col in df if col in signups]
     df=df[mycols]
     df=formatnamesnumbers(df)
     # place date/transfer in timestamp
-    mystamp=datetime.datetime.strftime(datetime.datetime.now(),'%m/%d/%y')+' transfer'
+    mystamp=datetime.strftime(datetime.now(),'%m/%d/%y')+' transfer'
     df['Timestamp']=mystamp
-    mycols=SCsignup.columns
-    SCsignup=SCsignup.append(df, ignore_index=True)
-    SCsignup=SCsignup[mycols]
-    return SCsignup
+    mycols=signups.columns
+    signups=signups.append(df, ignore_index=True)
+    signups=signups[mycols]
+    return signups
 
 def packagetransfers(teams, Mastersignups, famcontact, players, season, year, acronyms, messfile):
     ''' Package roster and contact info by sport- school and save as separate xls files 
@@ -93,7 +93,7 @@ def packagetransfers(teams, Mastersignups, famcontact, players, season, year, ac
     # get division from Teams xls (for roster)
     transSU=pd.merge(transSU, teams, how='left', on=['Team'], suffixes=('','_r3')) # effectively adds other team info for roster toall players
     transSU['Role']='Player' # add column for role
-    transSU['Open/Closed']='Closed'
+    # transSU['Open/Closed']='Closed'
 
     # Sort by grade pre-split
     transSU.Grade=transSU.Grade
@@ -338,11 +338,11 @@ def parseDate(val):
                         if yr<100 and len(str(yr))==2: # handle 2 digit year
                             yr=int('20'+str(yr))
                         if mo < 13: # normal US version (month first)
-                            return datetime.datetime(yr, mo, dy).date()
+                            return datetime(yr, mo, dy).date()
                         # handle day month reversal 
                         elif dy<13: # possible month day reverse
                             print('Month and day reverse for %s' %val)
-                            return datetime.datetime(yr, dy, mo).date() # Assume month/day switch
+                            return datetime(yr, dy, mo).date() # Assume month/day switch
                     except:
                         print('Problem extracting date from ', val)
                         return None
@@ -351,11 +351,11 @@ def parseDate(val):
                     try:
                         (yr,mo,dy)=[int(i) for i in val.split('-')]
                         if mo < 13: # normal US version (month first)
-                            return datetime.datetime(yr, mo, dy).date()
+                            return datetime(yr, mo, dy).date()
                         # handle day month reversal 
                         elif dy<13: # possible month day reverse
                             print('Month and day reverse for %s' %val)
-                            return datetime.datetime(yr, dy, mo).date() # Assume month/day switch                        
+                            return datetime(yr, dy, mo).date() # Assume month/day switch                        
                     except:
                         print('Problem extracting date from ', val)
                         return val
@@ -363,14 +363,37 @@ def parseDate(val):
                     try:
                         (mo,dy,yr)=[int(i) for i in val.split('-')]
                         if mo < 13: # normal US version (month first)
-                            return datetime.datetime(yr, mo, dy).date()
+                            return datetime(yr, mo, dy).date()
                         # handle day month reversal 
                         elif dy<13: # possible month day reverse
                             print('Month and day reverse for %s' %val)
-                            return datetime.datetime(yr, dy, mo).date() # Assume month/day switch                        
+                            return datetime(yr, dy, mo).date() # Assume month/day switch                        
                     except:
                         print('Problem extracting date from ', val)
                         return val
+
+def loadProcessPlayerInfo():
+    '''Loads and processes players & family contacts (but not signup file)
+    args:
+        gsignups -- google signups 
+        season - 'Fall', 'Winter', 'Spring
+        year - 4 digit int (uses fall value all school year.. ie. 2018-19 year is always
+        2018)
+        ''' 
+    players=pd.read_csv(cnf._INPUT_DIR + '\\players.csv', encoding='cp437') # load existing player data (need to find correct DOB format)
+    players.Grade=players.Grade.replace('K',0)
+    players.Grade=players.Grade.replace('pK',0) # just make them 0s for now
+    players.Grade=players.Grade.astype(int)
+    # TODO use fixdates if players imports as string (various formats possible)
+    # players['DOB']=players['DOB'].apply(lambda x: fixDates(x))
+    if not isinstance(players.DOB[0], pd.Timestamp):# sometimes direct import to pd timestamp works, other times not
+        players.DOB=players.DOB.apply(lambda x: parseDate(x))
+
+    famcontact=pd.read_csv(cnf._INPUT_DIR + '\\family_contact.csv', encoding='cp437') # load family contact info
+    famcontact=formatnamesnumbers(famcontact)
+    
+    return players, famcontact
+
 
 def loadProcessGfiles(gsignups, season, year):
     '''Loads and processes players, family contacts and signup file, gets active 
@@ -407,7 +430,7 @@ def loadProcessGfiles(gsignups, season, year):
         gsignups.DOB=gsignups.DOB.apply(lambda x: parseDate(x))
 
     # Get year from signup file name    
-    outputduplicates(gsignups) # quick check of duplicates output in console window (already removed from SCsignup)
+    outputduplicates(gsignups) # quick check of duplicates output in console window (already removed from signups)
     gsignups=formatnamesnumbers(gsignups) # format phone numbers, names to title case, standardize schools, etc.
     famcontact=formatnamesnumbers(famcontact)
     
@@ -477,17 +500,17 @@ def loadprocessfiles(signupfile):
             'Pfirst2','Plast2','Phone2','Text2','Email2','Coach2','Unisize','Unineed']
         SUraw.loc[SUraw.index,'Plakey']=np.nan # add if absent
         SUraw.loc[SUraw.index,'Famkey']=np.nan
-    SCsignup=SUraw.drop_duplicates(subset=['First', 'Last','Grade','Sport'])
-    SCsignup['Sport'].replace({'Volleyball':'VB'},inplace=True, regex=True)
+    signups=SUraw.drop_duplicates(subset=['First', 'Last','Grade','Sport'])
+    signups['Sport'].replace({'Volleyball':'VB'},inplace=True, regex=True)
     # Get year from signup file name    
     season=re.match(r'(\D+)', signupfile).group(0) # season at string beginning followed by year (non-digit)
     if '\\' in season: # remove file path problem
         season=season.split('\\')[-1]
     year=int(re.search(r'(\d{4})', signupfile).group(0)) # full year should be only number string in signups file
-    outputduplicates(SUraw) # quick check of duplicates output in console window (already removed from SCsignup)
-    SCsignup=formatnamesnumbers(SCsignup) # format phone numbers, names to title case, standardize schools, etc.
+    outputduplicates(SUraw) # quick check of duplicates output in console window (already removed from signups)
+    signups=formatnamesnumbers(signups) # format phone numbers, names to title case, standardize schools, etc.
     famcontact=formatnamesnumbers(famcontact)
-    return players, famcontact, SCsignup, season, year
+    return players, famcontact, signups, season, year
     
 def findavailablekeys(df, colname, numkeys):
     '''Pass df and colname, return a defined number of available keys list
@@ -515,31 +538,38 @@ def organizeroster(df):
     # replace Girl, Boy with m f
     df.Sex=df.Sex.replace('Girl','F')
     df.Sex=df.Sex.replace('Boy','M')
+    df.Sex=df.Sex.str.upper() # ensure uppercase
     # Convert date format to 8/25/2010 string format
-    mycols=['Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Open/Closed','Coach ID']
+    mycols=['Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Coach ID']
     df=df[mycols] # put back in desired order
     df=df.sort_values(['Team'])
     return df
 
 '''TESTING  row=tempplay.iloc[7]
-SCsignup=SCsignup[SCsignup['Last']=='Elston']    
+signups=signups[signups['Last']=='Elston']    
 '''
 
-def processdatachanges(SCsignup, players, famcontact, year):
+def processdatachanges(signups, players, famcontact, year):
     '''Pass SC signups subset from google drive, update address for more up-to-date 
     contact information, new address, etc. 
     must start here if troubleshooting
+    
+    args:
+        signups -- online signups file (normally google drive)
+        players -  player DOB, grade, etc
+        famcontact-  family contact info
+        year - sports year (int); e.g. 2019 for 2019-20 school year
     '''
-    # Using all entries from SCsignup (manual and gdrive)
+    # Using all entries from signups (manual and gdrive)
     # Updates from paper signups should be done directly to famcontact and players csv files (skip entirely)
     '''
-    SCsignup.Timestamp=pd.to_datetime(SCsignup.Timestamp, errors='coerce') # converts to naT or timestamp 
-    gdsignups=SCsignup.dropna(subset=['Timestamp']) # drops manual entries (no google drive timestamp)
+    signups.Timestamp=pd.to_datetime(signups.Timestamp, errors='coerce') # converts to naT or timestamp 
+    gdsignups=signups.dropna(subset=['Timestamp']) # drops manual entries (no google drive timestamp)
     '''
     # merge w/ players and update grade, recalc grade adjustment, and school
     # must use left merge to keep correct indices from players df (inner causes reindexing)
     players=players.reset_index(drop=True)
-    tempplay=pd.merge(players, SCsignup, how='inner', on=['Plakey'], suffixes=('','_n'))
+    tempplay=pd.merge(players, signups, how='inner', on=['Plakey'], suffixes=('','_n'))
     tempplay=tempplay.dropna(subset=['Gender_n']) # this drops all without a google drive entry
 
     for index, row in tempplay.iterrows():
@@ -569,7 +599,7 @@ def processdatachanges(SCsignup, players, famcontact, year):
     players.to_csv(outname,index=False) # direct save of changes from google drive info
     # now update new info into family contacts
     # faminfo=gdsignups.drop_duplicates(subset=['Famkey']) # only process first kid from family 
-    faminfo=SCsignup.drop_duplicates(subset=['Famkey']) 
+    faminfo=signups.drop_duplicates(subset=['Famkey']) 
     famcontact=prepcontacts(famcontact)
     faminfo=prepcontacts(faminfo)
     tempfam=pd.merge(famcontact, faminfo, how='inner', on=['Famkey'], suffixes=('','_n')) # same indices as famcontact
@@ -1005,21 +1035,21 @@ def updateplayer_tk(row, players, **upkwargs):
     rownum+=1
     # Use listbox of common schools?
     if 'DOB' in upkwargs: # indicates discrepancy
-        DOB1=datetime.datetime.date(row.DOB) 
-        DOB2=datetime.datetime.date(row.DOB_n)
+        DOB1=date(row.DOB) 
+        DOB2=date(row.DOB_n)
         # create and display DOB variables
         def ChooseDOB1(event):
-            DOB.set(datetime.datetime.strftime(DOB1,'%m/%d/%y'))
+            DOB.set(datetime.strftime(DOB1,'%m/%d/%y'))
         def ChooseDOB2(event):
-            DOB.set(datetime.datetime.strftime(DOB2,'%m/%d/%y'))  
+            DOB.set(datetime.strftime(DOB2,'%m/%d/%y'))  
         DOB=tk.StringVar()
-        DOB.set(datetime.datetime.strftime(DOB1,'%m/%d/%y')) # defaults to original
+        DOB.set(datetime.strftime(DOB1,'%m/%d/%y')) # defaults to original
         tk.Label(root, text='Update date of birth?').grid(row=rownum, column=0)
-        mytxt='current DOB:'+datetime.datetime.strftime(DOB1,'%m/%d/%y')
+        mytxt='current DOB:'+datetime.strftime(DOB1,'%m/%d/%y')
         b=tk.Button(master=root, text=mytxt)
         b.bind('<Button-1>', ChooseDOB1)
         b.grid(row=rownum, column=1)
-        mytxt='New DOB:'+datetime.datetime.strftime(DOB2,'%m/%d/%y')
+        mytxt='New DOB:'+datetime.strftime(DOB2,'%m/%d/%y')
         b=tk.Button(master=root, text=mytxt)
         b.bind('<Button-1>', ChooseDOB2)
         b.grid(row=rownum, column=2)            
@@ -1080,7 +1110,7 @@ def updateplayer_tk(row, players, **upkwargs):
             if 'school' in upkwargs:
                 players.loc[thisind,'School']= school.get()
             if 'DOB' in upkwargs:
-                newDOB=datetime.datetime.strptime(DOB.get(),'%m/%d/%y')
+                newDOB=datetime.strptime(DOB.get(),'%m/%d/%y')
                 players.loc[thisind,'DOB']= newDOB
         except:
             print('Error updating info for', row.Plakey, row.First, row.Last)
@@ -1095,7 +1125,7 @@ def prepcontacts(df):
     for i, col in enumerate(mycols):
         try:
             df[col]=df[col].str.strip()
-        except: # maybe only nan or not present (i.e. in SCsignup)
+        except: # maybe only nan or not present (i.e. in signups)
             pass
     mycols=['Text1','Text2','Text3']
     for i, col in enumerate(mycols):
@@ -1109,10 +1139,10 @@ def prepcontacts(df):
 def findyearseason(df):
     ''' Pass raw signups and determine year and sports season '''
     # get year from system clock and from google drive timestamp    
-    now=datetime.datetime.now()
+    now=datetime.now()
     val=df.Timestamp[0] # grab first timestamp    
-    if val!=datetime.datetime: # if not a timestamp (i.e. manual string entry find one
-        while type(val)!=datetime.datetime:
+    if val!=datetime: # if not a timestamp (i.e. manual string entry find one
+        while type(val)!=datetime:
             for index, row in df.iterrows():
                 val=df.Timestamp[index]
     year=val.year # use year value from signup timestamps
@@ -1229,9 +1259,9 @@ def graduate_players(players, year):
         dob=players.iloc[index]['DOB']
         if str(gradeadj)=='nan' or str(dob)=='NaT': # skip grade update if info is missing
             continue
-        dob=datetime.datetime.date(dob)
+        dob=date(dob)
         # calculate current age at beginning of this school on 8/1 
-        age=datetime.date(year,8,1)-dob
+        age=date(year,8,1)-dob
         age = (age.days + age.seconds/86400)/365.2425 
         # assign grade based on age (and grade adjustment)
         newgrade=int(age)+int(gradeadj)-5
@@ -1283,13 +1313,13 @@ def estimategrade(df, year):
         grade=df.loc[index]['Grade']
         if str(grade)=='nan': # skips any players who already have assigned grade
             dob=df.loc[index]['DOB']
-            dob=datetime.datetime.date(dob) # convert to datetime date from timestamp
+            dob=date(dob) # convert to datetime date from timestamp
             first=df.loc[index]['First']
             last=df.loc[index]['Last']
             if str(dob)=='nan':
                 print ('DOB missing for ', first,' ', last)
                 continue # skip to next if dob entry is missing
-            currage=datetime.date(year,8,1) - dob 
+            currage=date(year,8,1) - dob 
             currage = (currage.days + currage.seconds/86400)/365.2425 # age on first day of school/ sports season
             gradeest=int(currage-5)
             if gradeest==0:
@@ -1334,7 +1364,7 @@ def updateoldteams(teams, year):
 def splitcoaches(df):
     ''' Pass CYC teams list, split and duplicate rows with comma separated vals in colname for extra coaches'''    
     df['Role']='Coach' # add col for head or asst (first entry for head coach)
-    df['Open/Closed']='Closed'
+    # df['Open/Closed']='Closed'
     assistants=df.dropna(subset=['AssistantIDs']) # drop teams w/ no asst coaches
     for index, rows in assistants.iterrows():
         val=assistants.loc[index,'AssistantIDs']
@@ -1361,7 +1391,7 @@ def addcoachestoroster(teams, coaches):
     CYCcoach=teams.loc[thismask] # also has associated sport
     CYCcoach=splitcoaches(CYCcoach) # makes new row for all assistant coaches on CYC teams
     CYCcoach=pd.merge(CYCcoach, coaches, how='left', on=['Coach ID'], suffixes=('','_r')) 
-    mycols=['Sport','Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Open/Closed','Coach ID']
+    mycols=['Sport','Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Coach ID']
     for col in [col for col in mycols if col not in CYCcoach.columns]:
         CYCcoach[col]='' # birthdate generally missing
     CYCcoach=CYCcoach[mycols] # put back in desired order
@@ -1528,15 +1558,15 @@ def makegoogcont(df, famcontact, players, season, year):
     return
 
 def createsignups(df, Mastersignups, season, year):     
-    ''' pass SCsignup and add signups to master list, also returns list of current player keys by sport
+    ''' pass signups and add signups to master list, also returns list of current player keys by sport
     typically use writesignupstoExcel instead
     '''   
     sportsdict={'Fall':['VB','Soccer'], 'Winter':['Basketball'],'Spring':['Track','Softball','Baseball','T-ball']}
     sportlist=sportsdict.get(season) 
     # Use comma sep on multiple sport entries?? 
-    now=datetime.datetime.now()
-    thisdate=datetime.date.strftime(now,'%m/%d/%Y') # for signup date
-    df['SUdate']=thisdate # can do this globally although might also add to SCsignup
+    now=datetime.now()
+    thisdate=date.strftime(now,'%m/%d/%Y') # for signup date
+    df['SUdate']=thisdate # can do this globally although might also add to signups
     startlen=len(Mastersignups) # starting number of signups 
     intcols=['SUkey','Year']
     for i, col in enumerate(intcols):
@@ -1606,7 +1636,7 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
     Specials=df[(df['Year']==year) & (df['Sport'].isin(speciallist))] # deal with these at bottom
     # Proceed with all normal South Central sports 
     df = df[(df['Year']==year) & (df['Sport'].isin(sportlist))] # filter by year 
-        
+
     # make duplicate entry row for double-rostered players (multiple team assignments)
     thismask = df['Team'].str.contains(',', na=False) # multiple teams are comma separated
     doubles=df.loc[thismask]
@@ -1630,13 +1660,13 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
     # DOB, School  from players.csv
     df=pd.merge(df, players, how='left', on=['Plakey'], suffixes=('','_r3'))        
     df['Role']='Player' # add column for role
-    df['Open/Closed']='Closed'
+    # df['Open/Closed']=np.nan
     df['Coach ID']=''
     
     def formatDOB(val):
         # Pat moore date format is 4/4/19.. reformat as string for csv output
         try:
-            return datetime.datetime.strftime(val, "%m/%d/%y")
+            return datetime.strftime(val, "%m/%d/%y")
         except:
             # print('Problem converting %s of type %s to date string format' %(val, type(val)) )
             return ''
@@ -1767,6 +1797,7 @@ def detectrosterchange(PMroster, myroster):
     datetime format conversions can be problematic '''
     # all columns by default, false drops both duplicates leaving unique rows
     bothrosters=pd.concat([PMroster,myroster])
+    mycols=bothrosters.columns
     nanrows=bothrosters[pd.isnull(bothrosters['Birthdate'])]
     nanrows=nanrows.drop_duplicates(keep=False)
     # ensure player rows are both in correct format
@@ -1789,6 +1820,8 @@ def detectrosterchange(PMroster, myroster):
     # Fix date string differences
     alteredrows=bothrosters.drop_duplicates(keep=False)
     alteredrows=alteredrows.append(nanrows)
+    alteredrows=alteredrows[mycols]
+    alteredrows=alteredrows.sort_values(['Lname','Fname'])
     return alteredrows
 
 def saveteams(teams):
@@ -1854,10 +1887,10 @@ def assigntrackgroup(df, year, players):
     for index, row in Track.iterrows():
         DOB=Track.loc[index]['DOB'] # merged from players.csv
         if isinstance(DOB,str):
-            DOB=datetime.datetime.strptime(DOB,"%m/%d/%Y").date() # convert string to datetime
+            DOB=datetime.strptime(DOB,"%m/%d/%Y").date() # convert string to datetime
         elif isinstance(DOB, pd.tslib.Timestamp):
             DOB=DOB.date() # convert timestamp to datetime
-        trackage=datetime.date(year+1,5,31)-DOB # age on prior year's May 31st (same as school year in current convention)
+        trackage=date(year+1,5,31)-DOB # age on prior year's May 31st (same as school year in current convention)
         trackage=(trackage.days + trackage.seconds/86400)/365.2425 # as decimal
         trackage=math.floor(trackage)
         if trackage <=7:
@@ -1872,7 +1905,7 @@ def assigntrackgroup(df, year, players):
             team='Track1415'
         else: # probably some entry error
             mystr=Track.loc[index]['First']+' '+Track.loc[index]['Last']+' Grade:'+Track.loc[index]['Grade']
-            print('Suspected DOB error for',mystr, 'DOB:', datetime.date.strftime(DOB, "%m/%d/%y") )
+            print('Suspected DOB error for',mystr, 'DOB:', datetime.strftime(DOB, "%m/%d/%y") )
             team=''
         # Now write back altered subset to mastersignups (index is lost so use SUkey)
         SUkey=int(Track.loc[index]['SUkey'])
@@ -1931,10 +1964,10 @@ def maketracksummary(df, year, players):
     for index, row in Track.iterrows():
         DOB=Track.loc[index]['DOB'] # merged from players.csv
         if isinstance(DOB,str):
-            DOB=datetime.datetime.strptime(DOB,"%m/%d/%Y").date() # convert string to datetime
+            DOB=datetime.strptime(DOB,"%m/%d/%Y").date() # convert string to datetime
         elif isinstance(DOB, pd.tslib.Timestamp):
             DOB=DOB.date() # convert timestamp to datetime
-        trackage=datetime.date(year+1,5,31)-DOB # age on prior year's May 31st (same as school year in current convention)
+        trackage=date(year+1,5,31)-DOB # age on prior year's May 31st (same as school year in current convention)
         trackage=(trackage.days + trackage.seconds/86400)/365.2425 # as decimal
         Track.loc[index,'Trackage'] = trackage
         trackage=math.floor(trackage)
@@ -2161,7 +2194,7 @@ def findplayers(signups, players, famcontact, year):
     if not a perfect match on all characters, create some data output structure to resolve possible problems
     plakey and famkey cols added in loadprocess '''
     savepla=False # flags to save modified files
-    savefaBm=False
+    savefam=False
 
     phonedict=makephonedict(famcontact) # dict for known phone #s to famkey
     # left merge keeping index to do first/last/dob match (works since no duplicates in players)
@@ -2169,7 +2202,7 @@ def findplayers(signups, players, famcontact, year):
     if len(matches)!=len(signups):
         print('Multiple match problem in players csv!')
         return signups, players, famcontact
-    # ensure no p
+    # after first/last/DOB match, copies over assigned plakey as found in players
     matches=matches[(pd.isnull(matches['Plakey'])) & (pd.notnull(matches['Plakey_2']))]
     signups.loc[matches.index,'Plakey'] = matches['Plakey_2']
     signups.loc[matches.index,'Famkey'] = matches['Famkey_2']
@@ -2179,7 +2212,7 @@ def findplayers(signups, players, famcontact, year):
     if len(matches)!=len(alias):
         print('Multiple match problem in players csv!')
         return signups, players, famcontact
-    # Find newly matched plakeys
+    # Find newly matched plakeys (using player alias)
     matches=matches[(pd.isnull(matches['Plakey'])) & (pd.notnull(matches['Plakey_2']))]
     signups.loc[matches.index,'Plakey'] = matches['Plakey_2']
     signups.loc[matches.index,'Famkey'] = matches['Famkey_2']
@@ -2189,16 +2222,17 @@ def findplayers(signups, players, famcontact, year):
     if len(nophone)>1:
         print('Add missing phone for %s' %",".join(nophone.Last.unique().tolist()))
     unmatched=unmatched.loc[pd.notnull(unmatched['Phone1'])]
-    # Birthday instead of DOB problem
-    bd=unmatched[ unmatched['DOB'] > datetime.date(year-1,1,1)]
-    if len(bd)>1:
-        print('Fix birthday instead of DOB for %s' %",".join(bd.Last.unique().tolist()))
-    unmatched= unmatched[~unmatched.index.isin(bd.index)] # Remove birthdays
     # blank DOBs will be nonetype (after datetime conversion)
     nobd=unmatched[pd.isnull(unmatched['DOB'])]
-    if len(nobd)>1:
+    if len(nobd)>0:
         print('Enter DOB for %s' %",".join(nobd.Last.unique().tolist()))
     unmatched= unmatched[pd.notnull(unmatched.DOB)] # Remove no DOB
+
+    # Birthday instead of DOB problem
+    bd=unmatched[ unmatched['DOB'] > date(year-1,1,1)]
+    if len(bd)>0:
+        print('Fix birthday instead of DOB for %s' %",".join(bd.Last.unique().tolist()))
+    unmatched= unmatched[~unmatched.index.isin(bd.index)] # Remove birthdays
     
     # lastnames=makelastlist(players, famcontact) # set of tuples with last name and assoc famkey
     for index, row in unmatched.iterrows(): # row=unmatched.iloc[7]
@@ -2254,7 +2288,7 @@ def findplayers(signups, players, famcontact, year):
 
 def addnewplafam(Ser, players, famcontact):
     ''' Add single new player & family after confirmation with tk '''
-    # Create family name for new families (added to famcontacts but not needed in SCsignup)
+    # Create family name for new families (added to famcontacts but not needed in signups)
     last=str(Ser.Last).title()
     plast=str(Ser.Plast1).title() # parent 1 last name
     if last==plast: # same name for parent and player 
@@ -2520,8 +2554,8 @@ def comparefamkeys(players,famcontact):
 def calcage(Ser):
     '''pass Series with DOB as timestamp and return Age column in years as floats
     return column containing age in years (e.g. 6.1 yrs)'''  
-    mytime=datetime.datetime.now() 
-    mytime=datetime.datetime.date(mytime) # convert time to datetime.date
+    mytime=datetime.now() 
+    mytime=datetime.date(mytime) # convert time to datetime.date
     Ser=pd.to_datetime(Ser)
     # Get age in years
     Age=mytime-Ser  # age in days (timedelta)
@@ -2566,14 +2600,22 @@ def parseOls(fname):
 def updategradeadjust(row, players, year):
     ''' From row in signup file (with correct current grade) run gradeadj to
     see if changes need to be made 
-    called by processdatachanges after merge of SCsignup and players  '''
-    now=datetime.datetime.now()
+    called by processdatachanges after merge of signups and players  
+    args:
+        row - single entry from gsignups file (w/ parent entered grade)
+        players- DB-like file w/ player DOB and other info
+        year - Cabrini sports year (i.e. 2019 for 2019-20 school year)
+    '''
+    now=datetime.now()
     gradeadj=row.Gradeadj
     if str(row.DOB)=='NaT' or row.Grade_n=='nan': # skip players with no DOB on file
         return players
     # Already checked for DOB discrepancy betwee SC signup and players.csv
-    dob=datetime.datetime.date(row.DOB)
-    if row.Grade_n=='K': # use newly entered grade from SCsignup (not existing from players)
+    try:
+        dob=datetime.date(row.DOB)
+    except: # could be already converted to datetime.date
+        pass 
+    if row.Grade_n=='K': # use newly entered grade from signups (not existing from players)
         grade=0
     else:
         grade=row.Grade_n

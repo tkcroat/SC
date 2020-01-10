@@ -23,13 +23,15 @@ signupfile='Spring2017_signups.xlsx'
 signupfile='Fall2018_signups.xlsx'
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates
 players, famcontact, SCsignup, season, year = SC.loadprocessfiles(signupfile)
-teams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Teams')
-teams=pd.read_csv(cnf._INPUT_DIR+'\\Teams_2019.csv', encoding='cp437')
-coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
+teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
+coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') # common excel file encoding
+#teams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Teams')
+#teams=pd.read_csv(cnf._INPUT_DIR+'\\Teams_2019.csv', encoding='cp437')
+#coaches=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Coaches') # load coach info
 Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437') 
 # Teams folder under each season? 
 gdrivedict={
-    '$GDRIVEWINTER':'https://drive.google.com/open?id=0B9k6lJXBTjfiLVFBMlN1aWpoSEk',
+    '$GDRIVEWINTER':'https://drive.google.com/drive/u/0/folders/1oQQUiIKneC36P7mvJrVQNfC5M70NFrDW',
     '$GDRIVEFALL':'https://drive.google.com/open?id=1DU-6x6wqOkiiAh5OvlzKAsombspgYAnq',
     '$GDRIVE_SCHEDULING':'https://docs.google.com/forms/d/e/1FAIpQLSf_f7d1eHXn8Kfm75sqM0Wvv3CKPUemI-GWRWddSkIAqdd_6Q/viewform'
     }

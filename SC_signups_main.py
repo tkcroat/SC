@@ -38,6 +38,7 @@ season='Winter'
 year=2019
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates
 players, famcontact, gsignups = SC.loadProcessGfiles(gsignups, season, year)
+players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
 
 #%%
 
@@ -45,11 +46,11 @@ players, famcontact, gsignups = SC.loadProcessGfiles(gsignups, season, year)
 # SCsignup, players, famcontact =SC.findplayers(SCsignup, players, famcontact)
 # test w/ gsignups
 gsignups, players, famcontact =SC.findplayers(gsignups, players, famcontact, year)
-    
+
 # Save SC signups back to xls file (incl. altered names)
 SC.writetoxls(SCsignup,'Raw', signupfile)
 os.chdir(cnf._INPUT_DIR)
-SCsignup.to_csv(signupfile,index=False) # csv version
+SCsignup.to_csv(signupfile,index=False) # CSV version
 
 #TODO save method back to google signups? 
 
@@ -59,9 +60,9 @@ SCsignup = findmissinginfo(SCsignup, players, famcontact)
 
 #%% Process data changes from google drive info... works but check/correct using log
 # email, phone, parent names, address changes (house # detection)
-players, famcontact=SC.processdatachanges(SCsignup, players, famcontact, year)
+players, famcontact=SC.processdatachanges(gsignups, players, famcontact, year)
 
-players, famcontact=processdatachanges(SCsignup, players, famcontact, year)
+players, famcontact=processdatachanges(gsignups, players, famcontact, year)
 
 # load Mastersignups and add signups to master signups list (duplicates eliminated so no danger with re-run)
 Mastersignups = pd.read_csv(cnf._INPUT_DIR +'\\\master_signups.csv', encoding='cp437') 
@@ -157,8 +158,8 @@ SC.maketrackroster(Mastersignups, players, year)
 # rename team in teams_coaches, mastersignups, 
 
 # Detect any roster changes made by Pat Moore
-myroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Cabrini_Soccerroster2019.csv',encoding='cp437')
-PMroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Rosters\\Cabrini_Soccerroster2019_PM.csv',encoding='cp437')
+myroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Cabrini_Basketballroster2019.csv',encoding='cp437')
+PMroster=pd.read_csv(cnf._OUTPUT_DIR+'\\Cabrini_Basketballroster2019_PM.csv',encoding='cp437')
 
 myroster=pd.read_csv('Cabrini_VBroster2019.csv',encoding='cp437')
 PMroster=pd.read_csv('Cabrini_VBroster2019_PM.csv',encoding='cp437')

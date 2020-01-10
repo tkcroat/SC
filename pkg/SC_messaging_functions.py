@@ -12,7 +12,6 @@ import datetime
 import tkinter as tk
 import glob
 import re
-import sys
 import math
 import textwrap
 from tkinter import filedialog
@@ -399,6 +398,29 @@ def emailparent_tk(teams, season, year):
 index=thisteam.index[0]
 row=thisteam.loc[index] 
 '''	
+
+def readMessage():
+    ''' Choose text file from messages as template for email or log message (w/ find/replace
+    of team and individual info)
+    args: none
+    returns: string with contents of chosen TXT file
+    
+    '''
+    def pickMessage():
+        root=tk.Tk() # creates pop-up window
+        root.update() # necessary to close tk dialog after askopenfilename is finished
+        full_path = tk.filedialog.askopenfilename(initialdir = cnf._INPUT_DIR+'\\messages\\', title = 'Choose blank email template',
+                                filetypes=[ ('txt','*.txt')] )
+        root.destroy() # closes pop up window
+        return full_path
+    full_path = pickMessage()
+    with open(full_path,'r') as file:
+        blankmess = file.read()
+    return blankmess
+
+def askforunis():
+    # TODO finish me
+    pass
 
 def askforcards(teams, Mastersignups, year, famcontact, emailtitle, blankmess, **kwargs):
     ''' Notifying players that need cards and ask for them via custom e-mail (one per player) 
@@ -1275,7 +1297,7 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
     via custom e-mail; one per player
     currently not including SMS 
     kwargs:
-        choice - 'send' or 'test'
+        choice - 'send' or 'test' (defaults to test)
         recruit - T or F -- add recruiting statement for short teams
         mformat -  not really yet used ... just sending as text not html 
     '''
@@ -1307,8 +1329,8 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
         passwd=input()
         smtpObj.login('sfcasponsorsclub@gmail.com', passwd)
     else: # testing only... open log file
-        logfile=open('parent_email_log.txt','w', encoding='utf-8')
-    
+        logfile=open(cnf._OUTPUT_DIR+'\\parent_email_log.txt','w', encoding='utf-8')
+#%%    
     # this years signups only (later match for sport and team)
     Mastersignups=Mastersignups[Mastersignups['Year']==year]
     # Should be only one entry per coach
@@ -1336,9 +1358,11 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
         # Get sport, team, graderange, coach info (first/last/e-mail), playerlist
         teamlist.append([row.Sport, row.Team, school, gradetostring(row.Graderange),
             gender, coachinfo, row.Playerlist])
+        
     # get dictionary of teams found/matched in CYC schedule
     teamnamedict=findschteams(sched, teams, coaches)
-    # TESTING  sport, team, school, graderange, gender, coachinfo, playerlist=teamlist[i]    i=2
+    # TESTING  sport, team, school, graderange, gender, coachinfo, playerlist=teamlist[i]    i=1
+#%%
     for i, [sport, team, school, graderange, gender, coachinfo, playerlist] in enumerate(teamlist):
         # Either have cabrini only schedule or full CYC schedule
         if 'Team' in sched:
@@ -1413,10 +1437,11 @@ def sendschedule(teams, sched, fields, Mastersignups, coaches, year, famcontact,
         pass
         # TODO fix this attempted close
         # smtpObj.quit() # close SMTP connection
+#%%
     return
 
 # TESTING
-
+#%%
 def makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs):
     ''' Turn standard CYC calendar into google calendar 
     description: 1-2 girls soccer vs opponent   
@@ -1455,6 +1480,7 @@ def makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
             print('Problem converting date format of ', sched.iloc[0]['Date'])
     # gcal needs %m/%d/%y (not zero padded)
     sched['Date']=sched['Date'].dt.strftime(date_format='%m/%d/%Y')
+    ''' Reformat of time shouldn't be required i.e. 4:30 PM
     if type(sched.iloc[0]['Time'])==str:
         try:
             sched.Time=pd.to_datetime(sched.Time, format='%H:%M %p')
@@ -1463,6 +1489,7 @@ def makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
                 sched.Time=pd.to_datetime(sched.Time, format='%H:%M:%S') # convert string to timestamp
             except:
                 print('Failed conversion of time column... check format')
+    '''
     # Common reformatting of all gcals
     sched=sched.rename(columns={'Date':'Start Date','Time':'Start Time'})
 
@@ -1519,15 +1546,15 @@ def makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
                + cancel)
         thissch=thissch[gcalcols]
         if kwargs.get('splitcal', True): # separate save of gcal for each team 
-            fname='gcal_'+descr+'.csv'
+            fname=cnf._OUTPUT_DIR+'\\gcal_'+descr+'.csv'
             thissch.to_csv(fname, index=False)
         else: # add to single jumbo cal
             combocal=pd.concat([combocal, thissch], ignore_index=True)
     if not kwargs.get('splitcal', True):
-        fname='Cabrini_gcal_'+season.lower()+str(year)+'.csv'
+        fname=cnf._OUTPUT_DIR+'\\Cabrini_gcal_'+season.lower()+str(year)+'.csv'
         combocal.to_csv(fname, index=False)
     return 
-
+#%%
 def getgameschedule(div, schname, sched):
     ''' Find and extract game schedule for team with matching name '''
     sched=sched.rename(columns={'Game Time':'Time','Division Name':'Division', 'Field Name':'Location','Visitor':'Away','AwayTeam':'Away','Home Team':'Home'})
@@ -1559,9 +1586,10 @@ def findschteams(sched, teams, coaches):
         myteams=myteams.append(double)
 
     # First find all Cabrini teams 
+#%%
     teamnamedict={}
     for index, row in myteams.iterrows():
-        # get division
+        # get division   index=1  row= myteams.iloc[index]
         if '-' in row.Team:
             school='Cabrini'
             coach=str(row.Lname)
@@ -1607,6 +1635,7 @@ def findschteams(sched, teams, coaches):
                 print("Couldn't hash", row.Team)
         else:
             print("Couldn't find unique schedule team name for", row.Team, div)
+#%%
     return teamnamedict
 
 def shortnamedict(teams):
@@ -2009,7 +2038,16 @@ i=0   team=teamlist[i]
 '''
 def gamecardmaker(teams, coaches, Mastersignups, sched, pastelist, gctemplate):
     ''' Somewhat generic insertion into existing excel file template
-    open Excel_python_insert_template'''
+    open Excel_python_insert_template
+    args:
+        teams - 
+        coaches
+        Mastersignups
+        unilist - 
+        sched - team's extracted game schedule
+        pastelist - Instructions on copy of info to excel template
+        gctemplate - CYC template for sport
+    '''
 
     teamlist=np.ndarray.tolist(sched.Team.unique())
     # only need teams in schedule list (Cabrini CYC only)
@@ -2194,29 +2232,3 @@ def pastechunk(newsheet, mylist, startrow, startcol, celldir):
             thiscol=startcol+i
             newsheet.cell(row=startrow, column=thiscol).value=mylist[i]
     return newsheet
-
-def detectSMS(recipients):
-    '''Determine if primary (first) e-mail address is very likely SMS (9 to 10 leading numbers)'''
-    if len(recipients)==0:
-        return False
-    tempstr=recipients[0].split('@')[0]
-    SMSmatch=re.match(r'\d{9}', tempstr) 
-    if SMSmatch:
-        return True
-    else:
-        return False
-
-def findmissingcards(team, SUs, carddict):
-    ''' Finds players on team without CYC card on file 
-    return as comma sep first/last'''
-    thisteam=SUs[SUs['Team']==team]
-    plakeys=np.ndarray.tolist(thisteam.Plakey.unique())
-    plakeys=[str(i) for i in plakeys]
-    # Compare as strings (since dict keys are strings)
-    missingkeys=[i for i in plakeys if i not in carddict.keys()]
-    match=thisteam[thisteam['Plakey'].isin(missingkeys)]
-    missinglist=[]
-    for index, row in match.iterrows():
-        missinglist.append(row.First+' '+row.Last)
-    missingstr=','.join(missinglist)
-    return missingstr

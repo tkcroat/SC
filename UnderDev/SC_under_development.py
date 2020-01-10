@@ -25,35 +25,64 @@ import flask
 
 import sys
 from datetime import datetime
+
 #%% 
-teamname='MQP-Cassat-7BD1'
-teamname='Holy Redeemer-Mehan-7BD1-F'
-teamname='Holy Redeemer-Mehan-7BD1-H'
+def writeuniformlog(mastersign, teams, players, season, year, paylog):
+    ''' From mastersignups and teams, output contact lists for all teams/all sports 
+    separately into separate tabs of xls file 
+    autosaves to "Fall2016"_uniform_log.xls
+    args:
+        mastersign - list of signups and team assignments
+        teams - tab w/ uniform setname for this team
+        unilist - check if number/size already checked out for player
+        
+    '''
+    # Slice by sport: Basketball (null for winter?), Soccer, Volleyball, Baseball, T-ball, Softball, Track) 
+    # Load missing uniforms 
+    missing=mastersign.dropna(subset=['Issue date']) # only signups with uniform issued
+    missing=missing.loc[pd.isnull(missing['UniReturnDate'])] # keeps only unreturned uniforms
+    # Groupby plakey and sport for missing unis
+    
+    mastersign=mastersign[mastersign['Year']==year] # remove prior years in case of duplicate name
+    mastersign=mastersign.reset_index(drop=True)
+    # get school from players.csv
+    mastersign=pd.merge(mastersign, players, how='left', on=['Plakey'], suffixes=('','_r'))
+    # Find Cabrini teams from this season needing uniforms
+    thismask = teams['Uniforms'].str.contains('y', case=False, na=False)
+    uniformteams=teams.loc[ teams['Uniforms']!='N']
+    uniformlist= uniformteams.Team.unique() 
+    uniformlist=np.ndarray.tolist(uniformlist)
+    # single uniform log per season 
+    contactfile='\\'+str(season)+'_'+str(year)+'_uniform_log.xlsx'
+    writer=pd.ExcelWriter(cnf._OUTPUT_DIR+contactfile, engine='openpyxl',date_format='mm/dd/yy')
+    # Can just eliminate any entries not in uniform deposit list
+    mastersign=mastersign[mastersign['Team'].isin(uniformlist)] # only players on teams needing uniforms
+    # Columns needed for log output
+    mycols=['First', 'Last', 'School', 'Issue date', 'Uniform#', 'Size', 'Amount', 
+            'Deposit type', 'Deposit date', 'UniReturnDate', '$ returned', 
+            'Comments', 'Plakey', 'Famkey']
+    tabnamelist=[]
+    # TODO Find size from this year's sport signup
+    for team in uniformlist:
+        thismask = mastersign['Team'].str.contains(team, case=False, na=False)
+        thisteam=mastersign.loc[thismask] # this team's signups
+        sport=thisteam.iloc[0]['Sport'].lower()
+        thisteam=finddeposits(thisteam, paylog) # thisteam is this team's slice of info from master_signups
+        missing=[i for i in mycols if i not in thisteam.columns]
+        for miss in missing:
+            thisteam[miss]=''
+        thisteam=thisteam[mycols] # organize in correct format for xls file
+        tabname=sport[0:3]+team[0:3] # name tab with team's name..
+        if tabname in tabnamelist:
+            tabname+='2' # handles two teams per grade
+        tabnamelist.append(tabname)
+        thisteam.to_excel(writer, sheet_name=tabname,index=False) # this overwrites existing file
+    writer.save()
+    return
 
-thisSched=getSchedule(sched, teamname)
 
 
-thisSched=getSchedule(sched, 'Annunciation-Handal-6GD')
-thisSched=getSchedule(sched, 'Annunciation-Handal-6GD')
-
-allTeams=list(set(list(sched.Home.unique())+list(sched.Away.unique())))
-allTeams=[]
-[i for i in allTeams if 'Mehan' in str(i)]
-
-gymsched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\BB2019_Schedule_ByGym.xlsx')
-
-thisDate=datetime(2020,3,29)
-
-avail = findGymSlot(gymsched, datetime(2020,2,2)) # Fri
-avail = findGymSlot(gymsched, datetime(2020,2,9)) # Sun
-avail = findGymSlot(gymsched, datetime(2020,2,15)) #Sun
-
-from datetime import timedelta
-
-sched['Date']=sched['Date'].apply(lambda x:convDate(x))
-
-swapGames= findTeamSwap(teamName, badDay, sched)
-
+#%% 
     
 def findOpponents(teamName, badDay, sched, **kwargs):
     ''' Finds opponent(s) on day
@@ -68,11 +97,7 @@ def findOpponents(teamName, badDay, sched, **kwargs):
     kwargs:
         badTime:  if only 1 game of multiples on day is a problem   
     '''
-    # first check for proper team name (as printed in schedule)
-    allTeams=list(set(list(sched.Home.unique())+list(sched.Visitor.unique())))
-    if teamName not in allTeams:
-        print('Faulty team name not found in full schedule')
-        return
+
     # Find bad game(s) in question
     match=sched[ (sched['Date']==badDay) & ( (sched['Home']==teamName) | (sched['Visitor']==teamName)) ]
     if 'badTime' in kwargs:
@@ -101,9 +126,12 @@ def findTeamSwap(teamName, badDay, sched, gamerank=0, **kwargs):
         swapOld -- original offending set of games
         swapNew -- replacement w/ opponents rearranged
     '''
-
+    # first check for proper team name (as printed in schedule)
     allTeams=list(set(list(sched.Home.unique())+list(sched.Visitor.unique())))
-    league=teamName.split('-')[2][0:3]
+    if teamName not in allTeams:
+        print('Faulty team name not found in full schedule')
+        return
+    league=teamName.split('-')[2] # full league 7BD1 (grade/gender/letter and sublevel)
     leagueTeams=[i for i in allTeams if league in str(i)]
     # Find teams w/ bye that weekend
     weekend=sched[ (sched['Date']>badDay-timedelta(days=3)) & (sched['Date']<badDay+timedelta(days=3)) ]
@@ -112,21 +140,22 @@ def findTeamSwap(teamName, badDay, sched, gamerank=0, **kwargs):
     # Preference for teams w/o full/half schedule 
     bestAvailTeams = [i for i in bestAvailTeams if not i.endswith('-H')]
     bestAvailTeams = [i for i in bestAvailTeams if not i.endswith('-F')]
+    rankedSwaps={} # dict to hold possible games and assigned score
     # Find timespan of bye weekend for team1 (best swap)
     byeWeeks=findByeWeek(teamName, sched)
-    if len(byeWeeks)==0:
-        print('No bye week... switch to allow 2nd choice')
-        # TODO add algo to find other random game 
-    # Find possible swap/replacement games in first bye week
-    swapGames=sched[ (sched['Date']>=byeWeeks[0][0]) & (sched['Date']<=byeWeeks[0][1])]
-    # Find games for best swap team candidates while ensuring original team doesn't play itself
-    swapGames=swapGames[ (swapGames['Visitor'].isin(bestAvailTeams)) & (swapGames['Home']!=teamName) ]
-    swapOld, swapNew, swapTeam = chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames, **kwargs)
+    for byeWeek in byeWeeks:
+        # Find possible swap/replacement games in first bye week
+        swapGames=sched[ (sched['Date']>=byeWeek[0]) & (sched['Date']<=byeWeek[1])]
+        # Find games for best swap team candidates while ensuring original team doesn't play itself
+        swapGames=swapGames[ (swapGames['Visitor'].isin(bestAvailTeams)) & (swapGames['Home']!=teamName) ]
+        theseSwaps=rankSwaps(teamName, badDay, bestAvailTeams, sched, swapGames, **kwargs)
+        rankedSwaps.update(theseSwaps)
+    # find more possible swaps ..not necessarily during bye week 
+    swapOld, swapNew, swapTeam = pickBestSwap(rankedSwaps, gameRank)
     return swapOld, swapNew, swapTeam 
 
-        
 def findAllOpponents(teamName, sched):
-    ''' Return list of all of given tea'ms opponents
+    ''' Return list of all of given teams opponents
     '''
     thisSched=sched[ (sched['Home']==teamName) | (sched['Visitor']==teamName) ]
     opponents = [i for i in thisSched.Home.to_list() + thisSched.Visitor.to_list() if i !=teamName]
@@ -152,7 +181,7 @@ def findBadGames(teamName, badDay, sched, **kwargs):
             print('Time matched game not found')
     return match
 
-def chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames, **kwargs):
+def rankSwaps(teamName, badDay, bestAvailTeams, sched, swapGames, **kwargs):
     ''' if multiple possible swap games available, choose best swap by maximizing 
     schedule diversity of opponents (simultaneous for both swapped teams)
     adds large penalty (+3) for setting up 3rd game against same team
@@ -198,11 +227,27 @@ def chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames,
                 ct2+=1
             # key is indices of games to swap and name of team to swap from other game
             overlapScore[ind, ind2, row.Visitor]= ct1+ct2
-    # Produce sorted list from dict in best to worst order
-    # Best swapping games combo will have minimum overlap score
-    bestval = min(overlapScore.values())
-    bestSwap = [key for key, val in overlapScore.items() if val ==bestval]
-    bestSwap=bestSwap[gamerank] # choice from ranked list (index 0 unless overridden
+    return overlapScore
+
+#%%
+
+def pickBestSwap(rankedSwaps,gameRank=0):
+    ''' After evaluating all possible swaps across all available bye
+    weeks for original team, sort by rank and pick first (or pick
+    one based on gameRank index if original doesn't work for some 
+    other reason)
+    
+    args:
+        rankedSwaps -- dict w/ game score (val) and key (list w/ 2 game indices and 
+           affected swap team
+    gameRank -- which one to choose
+    
+    '''
+    rankSwapList=[]
+    for i in range( min(rankedSwaps.values()), max(rankedSwaps.values())+1):
+        theseSwaps = [key for key, val in rankedSwaps.items() if val ==i]
+        rankSwapList.extend(theseSwaps)
+    bestSwap=rankSwapList[gameRank] # choice from ranked list (index 0 unless overridden
     swapTeam=bestSwap[-1] # pull out swap team name
     bestSwap=bestSwap[0:2] # indices of swapped games
     swapOld = sched[sched.index.isin(bestSwap)]
@@ -224,6 +269,11 @@ def chooseBestSwap(teamName, badDay, bestAvailTeams, gamerank, sched, swapGames,
             swapNew.at[swapOld.index[1], 'Visitor']=swapTeam
             swapNew.at[swapOld.index[0], 'Visitor']=teamName
     return swapOld, swapNew, swapTeam
+#%%    
+    # turn rankedSwaps into list 
+#TODO wrap in the final picker/ game alterer 
+    # Produce sorted list from dict in best to worst order
+    # Best swapping games combo will have minimum overlap score
 
 def findResched(team1, team2, gymsched):
     ''' Find a date and venue for a game ... for full reschedule not swapping
