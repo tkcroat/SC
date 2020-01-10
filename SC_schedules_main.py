@@ -17,16 +17,36 @@ import pkg.SC_config as cnf # specifies input/output file directories
 from importlib import reload
 reload(SCsch)
 reload(SCmess)
+#%% Download from google sheets Cabrini basketball schedule
+sheetID = '1-uX2XfX5Jw-WPw3YBm-Ao8d2DOzou18Upw-Jb6UiPWg'
+rangeName = 'Cabrini!A:G'
+cabsched = SCapi.downloadSheet(sheetID, rangeName)
+
+#%% Load of other commonly needed info sheets
+teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
+coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437')
+fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv', encoding='cp437')
+Mastersignups = pd.read_csv(cnf._INPUT_DIR +'\\\master_signups.csv', encoding='cp437') 
+players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
+season='Winter'
+year=2019
+#%% Create all schedules and write to text log (non-auto emailed version)
+emailtitle='Game Schedules for $TEAMNAME'
+blankmess=SCmess.readMessage() # choose and read blank message from chosen *.txt
+cabsched=SCsch.alterSchedule(cabsched) # day and division changes for consistency to previous
+# write of all team schedules to parent_email_log (default choice)
+SCmess.sendschedule(teams, cabsched, fields, Mastersignups, coaches, year, famcontact, emailtitle, blankmess)
+
 #%%
 
-os.chdir('C:\\Users\\kevin\\Documents\\Sponsors_Club\\Schedules')
-
 # Read tentative google drive Pat Moore schedules (after delete of cols before header row)
-allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
-allteams=pd.read_csv('allTeams_basketball_schedule_24Dec18.csv')
+sched=pd.read_csv(cnf._OUTPUT_DIR+'\\Schedules\\Bball2019_full_schedule.csv')
+# Read of full xlxs by league file... good format for schedule extraction
+# However csv file has separated schedules
+sched=pd.read_csv(cnf._OUTPUT_DIR+'\\Schedules\\Bball2019_full_schedule.csv')
 
 sched=pd.read_excel('C:\\Temp\\allTeams.xlsx')
-fullsched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\\BB2019_full_schedule.xlsx')
+sched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\\BB2019_full_schedule.xlsx')
 fullsched=pd.read_excel('CYC_soccer_2019.xlsx')
 
 # Load full schedule (Pat moore excel format)
@@ -46,19 +66,6 @@ sched=pd.read_csv('Cab_Bball_schedule_24Dec18.csv')
 sched=pd.read_csv('Cabrini_2017_VB_soccer_schedule.csv')
 sched2=pd.read_csv('Cabrini_VB2017_schedule.csv')
 
-# Load Cabrini team set 
-teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
-teams=pd.read_csv(cnf._INPUT_DIR+'\\teams_2019.csv', encoding='cp437')
-coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches') # load coach info
-coaches=pd.read_csv(cnf._INPUT_DIR+'\\coaches.csv', encoding='cp437')
-fields=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Fields')
-fields=pd.read_csv(cnf._INPUT_DIR+'\\fields.csv', encoding='cp437')
-
-Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437') 
-fields.to_csv(cnf._INPUT_DIR+'fields.csv', index=False)
-
-season='Winter'
-year=2019
 # load old teams
 
 # Get subset of full schedule for Cabrini teams (and Cab transfer teams)
@@ -71,7 +78,6 @@ cabsched=SCmess.getcabsch(fullsched, teams, coaches, fields, **kwargs)
 cabsched.to_csv(cnf._OUTPUT_DIR + '\\Cab_Basketball2019_schedule_26Dec19.csv', index=False) # save (used for sendschedule, maketextsch, gcal, etc.)
 
 # Compare schedule to previous and return altered rows
-
 #%% CYC game rescheduler (prior to release)... swapping team opponents
 sched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\\BB2019_full_schedule.xlsx')
 sched=SCsch.prepSched(sched)
@@ -82,9 +88,17 @@ badDay=datetime(2020,1,11) # Team has two impossible to play games
 teamName='St Frances Cabrini-Croat-7BD1'
 badDay=datetime(2020,1,25) # Team has two impossible to play games
 
-swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, gamerank=1)
+swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, gameRank=0)
 
-swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, **{'badTime'='7:30 PM'})
+swapOld, swapNew, swapTeam = findTeamSwap(teamName, badDay, sched, **{'badTime':'7:30 PM'})
+
+# swapping same teams to new datetime/venue.. harder
+gymsched=pd.read_excel(cnf._OUTPUT_DIR+'\\Schedules\BB2019_Schedule_ByGym.xlsx')
+
+avail = findGymSlot(gymsched, datetime(2020,2,15)) #Sun
+
+thisSched=getSchedule(sched, 'Annunciation-Handal-6GD')
+
 
 #%%
 # Make sports google calendars
@@ -93,8 +107,6 @@ kwargs.update({'splitcal':False}) # single jumbo calendar option
 kwargs.update({'school':'Cabrini'}) # Cabrini teams only
 kwargs.update({'division':'6B'})
 SCmess.makegcals(cabsched, teams, coaches, fields, season, year, duration=1, **kwargs)
-
-makegcals(sched, teams, coaches, fields, season, year, duration=1, **kwargs)
 
 # make game cards from given schedule
 sched=pd.read_csv('Cab_soccer_schedule_23Aug18.csv') # reload
@@ -136,7 +148,6 @@ thisteam=schedule[(schedule['League']==league) & (schedule['Home'].str.contains(
 thisteam.to_csv('Ethan_4B_schedule.csv', index=False)
 
 # Load league results
-
 
 # Create google calendar from single team
 makegcalCYC(thisteam,'Ethan baseball', 1.5)

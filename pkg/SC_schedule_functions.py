@@ -6,9 +6,48 @@ Created on Thu Jun 22 06:46:15 2017
 """
 import pandas as pd
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import tkinter as tk
 
+
+def alterSchedule(sched):
+    ''' Convert/prepare google docs online schedule version to work with 
+    previous scheduler version.. mainly Division and Day columns
+    
+    sched=cabsched.copy()
+    '''
+    def convDate(val):
+        # Datetime conversion for string dates
+        try:
+            return datetime.strptime(val,'%m/%d/%y')
+        except:
+            try:
+                return datetime.strptime(val,'%m/%d/%Y')
+            except:
+                print('Could not convert', val)
+                return val
+            
+    def setWeekDay(val):
+        # Find day of week from date
+        val=convDate(val) # always attempt datetime conversion (w/ try-except)
+        # determine day of week from date
+        days=['Mon','Tues','Wed','Thurs','Fri','Sat','Sun'] # day order for .weekday()
+        try:
+            return days[val.weekday()]
+        except:
+            print('Value is', val)
+            print('Error with', val.weekday())
+            return ''
+    def findDivision(val):
+        try:
+            return val.split('-')[2]
+        except:
+            return ''
+    if not "Day" in sched.columns:
+        sched['Day']=sched['Date'].apply(lambda x:setWeekDay(x))
+    if 'Division' not in sched.columns: # mod for google drive calendar version
+        sched['Division']=sched['Team'].apply(lambda x:findDivision(x))
+    return sched
 
 def findByeWeek(teamName, sched):
     ''' Finds bye weekend for team
