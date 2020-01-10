@@ -9,30 +9,50 @@ import pandas as pd
 
 import pkg.SC_billing_functions as SCbill
 import pkg.SC_uniform_functions as SCuni
+import pkg.SC_signup_google_API_functions as SCapi
 import pkg.SC_config as cnf
-os.chdir('C:\\Users\\tkc\\Documents\\Python_Scripts\\SC')
-if 'C:\\Users\\tkc\\Documents\\Python_Scripts\\Utilities' not in sys.path:
-    sys.path.append('C:\\Users\\tkc\\Documents\\Python_Scripts\\Utilities')
+
 #%%
 import pandas_utilities as pdutil
 from importlib import reload
 reload(SCuni)
 
-paylog=pd.read_excel(cnf._INPUT_DIR+'\\Payment_logbook.xlsx', sheetname='Paylog')
-# ISSUING UNIFORMS
-unilist=pd.read_excel(cnf._INPUT_DIR+'\\Master_uniform_logbook.xlsx',sheetname='Unilog')
-teams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Teams')
-oldteams=SCbill.loadoldteams(['Fall','Winter'], [2015,2016,2017, 2018]) 
-unisumm=pd.read_excel(cnf._INPUT_DIR+'\\Master_uniform_logbook.xlsx',sheetname='Summary')
+#%% Load of commonly-needed files
+teams=pd.read_csv(cnf._INPUT_DIR+'\\teams_2019.csv')
 Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
+paylog=pd.read_excel(cnf._INPUT_DIR+'\\Payment_logbook.xlsx', sheetname='Paylog')
 
-# Read back new info entered into uniform logs
+#%% Uniform inventory prior to uniform night
+# Read results of uniform inventory (
+# g-docs inventory sheet with setname, size and list of numbers (in closet)
+unis = SCapi.readInventory()
 
+unilist= SCapi.readUniList() # read master list of unique unis and checkout info
 
 # Inventory
 SCuni.checkuni_duplicates(unilist) # check for non-unique uniforms from master unilist
+
+# 
+# Older stuff... legacy
 # Load an inventory file
 inventory=pd.read_excel('uniform_inventory.xlsx')
+unilist=pd.read_excel(cnf._INPUT_DIR+'\\Master_uniform_logbook.xlsx',sheetname='Unilog')
+unisumm=pd.read_excel(cnf._INPUT_DIR+'\\Master_uniform_logbook.xlsx',sheetname='Summary')
+#%% 
+''' For uniform night or issue, work from season_uniform_log multi-tabbed xls like (or
+ google sheet format), then after event read back number/size/setname combos into 
+master unilist; 
+financial info separately entered into master payment log file (fees and deposits)... separate
+process so financials in uniform_log is just a view-only (or convenient way to copy o
+
+'''
+
+# ISSUING UNIFORMS
+
+# teams=pd.read_excel(cnf._INPUT_DIR+'\\Teams_coaches.xlsx', sheetname='Teams')
+oldteams=SCbill.loadoldteams(['Fall','Winter'], [2015,2016,2017, 2018]) 
+
+# Read back new info entered into uniform logs
 
 # Transfer unreturned unis from prior season's signup (if unreturned) to this season's signup
 Mastersignups=SCbill.transferunis(Mastersignups, season, year)

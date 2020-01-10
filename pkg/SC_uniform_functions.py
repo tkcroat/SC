@@ -7,6 +7,7 @@ Created on Tue Mar 27 11:06:45 2018
 import pandas as pd
 import numpy as np
 import datetime
+import pkg.SC_config as cnf
 
 def checkuni_duplicates(unilist):
     ''' Check uniform set to see if numbers are unique '''
@@ -16,7 +17,20 @@ def checkuni_duplicates(unilist):
             print(len(group),' unis from', sname, size, num)
     return 
 
-
+def checkInUnis(unis, unilist):
+    ''' Using results of recent physical inventory, check in any uniforms found
+    in closet but still charged out to some player
+    still using this in a manual mode to track down 
+    args:
+        unis -- List of each checked in uniform (Setname, Size, Number)
+        unilist - master list w/ status of each uni
+    '''
+    unicheck =pd.merge(unilist, unis, on=['Setname','Size','Number'], suffixes=('','_2'), how='inner')
+    checkins=unicheck[ (unicheck['Location']=='out') & (unicheck['Location_2']=='in') ]
+    # find checked out and/or missing (not assigned) unis
+    out = pd.merge(unilist, unis, on=['Setname','Size','Number'], suffixes=('','_2'), how='left')
+    out = out[pd.isnull(out['Location_2'])]
+    return checkins
 
 def getuniinfo(teams, unilogfile, Mastersignups, unilist, year):
     '''Readback of uniform numbers, sizes, issue dates from uniform night forms/log 
@@ -43,7 +57,7 @@ def getuniinfo(teams, unilogfile, Mastersignups, unilist, year):
     # remove entries with nan in uniform number (no info) .. will be a number or 'xx'
     # nan here should mean uniform not issued (unreported drop)
     alluniplayers=alluniplayers.dropna(subset=['Uniform#'])
-    nonum==alluniplayers[pd.isnull(alluniplayers['Uniform#'])]
+    nonum=alluniplayers[pd.isnull(alluniplayers['Uniform#'])]
     # TODO replace loop with merge --> then inspect each row
     uniinfo=pd.merge(alluniplayers, thisyearSU, how='left', on=['Sport','Plakey'], 
              suffixes=('','_2'))
@@ -167,27 +181,30 @@ def writeuniformlog(df, teams, players, season, year, paylog):
     uniformlist= uniformteams.Team.unique() 
     uniformlist=np.ndarray.tolist(uniformlist)
     # single uniform log per season 
-    contactfile=str(season)+'_'+str(year)+'_uniform_log.xlsx'
-    writer=pd.ExcelWriter(contactfile, engine='openpyxl',date_format='mm/dd/yy')
+    contactfile='\\'+str(season)+'_'+str(year)+'_uniform_log.xlsx'
+    writer=pd.ExcelWriter(cnf._OUTPUT_DIR+contactfile, engine='openpyxl',date_format='mm/dd/yy')
     # Can just eliminate any entries not in uniform deposit list
     df=df[df['Team'].isin(uniformlist)] # only players on teams needing uniforms
     # Columns needed for log output
     mycols=['First', 'Last', 'School', 'Issue date', 'Uniform#', 'Size', 'Amount', 
             'Deposit type', 'Deposit date', 'UniReturnDate', '$ returned', 
-            'Comments', 'Plakey', 'Famkey'] 
+            'Comments', 'Plakey', 'Famkey']
     tabnamelist=[]
-
-    for i, team in enumerate(uniformlist):
+    # TODO Find size from this year's sport signup
+    for team in uniformlist:
         thismask = df['Team'].str.contains(team, case=False, na=False)
         thisteam=df.loc[thismask] # this team's signups
         sport=thisteam.iloc[0]['Sport'].lower()
         thisteam=finddeposits(thisteam, paylog) # thisteam is this team's slice of info from master_signups
+        missing=[i for i in mycols if i not in thisteam.columns]
+        for miss in missing:
+            thisteam[miss]=''
         thisteam=thisteam[mycols] # organize in correct format for xls file
         tabname=sport[0:3]+team[0:3] # name tab with team's name..
         if tabname in tabnamelist:
             tabname+='2' # handles two teams per grade
         tabnamelist.append(tabname)
-        thisteam.to_excel(writer,sheet_name=tabname,index=False) # this overwrites existing file
+        thisteam.to_excel(writer, sheet_name=tabname,index=False) # this overwrites existing file
     writer.save()
     return
 
