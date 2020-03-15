@@ -26,8 +26,115 @@ import flask
 import sys
 from datetime import datetime
 
+import numpy as np
+
+
+def writeGsheetChanges(df, pygSheet):
+    ''' 
+    
+    '''
+    pygSheet.set_dataframe(df, 'A1')
+
+wks1.get_row(2)
+wks1.update_value('C12','testval')
+# Get pygsheet as pandas (screws up col order but is actively linked)
+
+# write pandas as pygsheet
+wks1.set_dataframe(test)
+
+df1 = SCapi.readPaylog() # direct download version
+
+df2= pd.DataFrame(wks1.get_all_records()) # cols out of order
+
+wks1.set_dataframe(teams, 'A1')
+
+
+# Strategy for alteration of online gsheets
+# pygsheets is actively linked ... use update_value method? 
+# Google sheets undo button only works for browser made changes (not programmatic)
+# Check for differences between 2 dataframes
+# pygsheets tutorial 
+# https://medium.com/game-of-data/play-with-google-spreadsheets-with-python-301dd4ee36eb
+# Revert to prior by clicking "last edit..." 
+
+def diffDf(df1,df2):
+    
+    bothdf=pd.concat([df1,df2])
+    altrows=bothdf.drop_duplicates(keep=False)
+    altrows=altrows.sort_values(['First','Last'])
+
+def modGsheet(df):
+    # perform datetime and int/nan conversions on assorted columns
+    def convInt(val):
+        try:
+            return int(val)
+        except:
+            return np.nan
+        
+    def convDate(val):
+        try:
+            return datetime.strptime(val, '%m/%d/%Y')
+        except:
+            try:
+                return datetime.strptime(val, '%m/%d/%y')
+            except:
+                try:
+                    return datetime.strptime(val.split(' ')[0], '%Y-%m-%d')
+                except:
+                    print('Error converting', val)
+                    return val
+
+def write2Sheet(sheetID, rangeName):
+    '''
+    
+    '''
+        {
+      "range": "Sheet1!A1:D5",
+      "majorDimension": "ROWS",
+      "values": [
+        ["Item", "Cost", "Stocked", "Ship Date"],
+        ["Wheel", "$20.50", "4", "3/1/2016"],
+        ["Door", "$15", "2", "3/15/2016"],
+        ["Engine", "$100", "1", "3/20/2016"],
+        ["Totals", "=SUM(B2:B4)", "=SUM(C2:C4)", "=MAX(D2:D4)"]
+      ],
+    }
+#%%
+def write2Sheet(sheetID, rangeName):
+    ''' Write to google sheet from current season's signups
+    
+    '''
+    creds = getGoogleCreds() # google.oauth2.credentials
+    service = build('sheets', 'v4', credentials=creds)
+    # Call the Sheets API
+    sheet = service.spreadsheets()
+    result = sheet.values().get(spreadsheetId=sheetID,
+                                range=rangeName).execute()
+    values = result.get('values', []) # list of lists
+    if len(values)==0:
+        print('Signup data not found')
+        return pd.DataFrame()    
+    headers = changeColNames(values[0])
+    # Google API retrieved rows each become lists truncated at last value
+    newValList=[]
+    for vallist in values[1:]:
+        while len(vallist)<len(headers):
+            vallist.append('') # add blanks for missing/optional answer
+        newEntry={}
+        for i, val in enumerate(vallist):
+            newEntry[headers[i]]= val
+        newValList.append(newEntry)
+    signups=pd.DataFrame(newValList, columns=headers)            
+    return signups 
 #%% 
-def writeuniformlog(mastersign, teams, players, season, year, paylog):
+
+# custom mod after removal of unis from mastersignups
+mastersign=Mastersignups.copy()
+mycols=mastersign.columns
+mycols=[i for i in mycols if i not in ['Issue date','Uniform#','UniReturnDate']]
+
+                                       
+def writeuniformlog(mastersign, teams, unilist, players, season, year, paylog):
     ''' From mastersignups and teams, output contact lists for all teams/all sports 
     separately into separate tabs of xls file 
     autosaves to "Fall2016"_uniform_log.xls
@@ -36,28 +143,45 @@ def writeuniformlog(mastersign, teams, players, season, year, paylog):
         teams - tab w/ uniform setname for this team
         unilist - check if number/size already checked out for player
         
-    '''
-    # Slice by sport: Basketball (null for winter?), Soccer, Volleyball, Baseball, T-ball, Softball, Track) 
-    # Load missing uniforms 
-    missing=mastersign.dropna(subset=['Issue date']) # only signups with uniform issued
-    missing=missing.loc[pd.isnull(missing['UniReturnDate'])] # keeps only unreturned uniforms
-    # Groupby plakey and sport for missing unis
-    
+    '''    
     mastersign=mastersign[mastersign['Year']==year] # remove prior years in case of duplicate name
     mastersign=mastersign.reset_index(drop=True)
-    # get school from players.csv
+    # keep track of needed cols
+    mycols=list(mastersign.columns)
+    # Just need school from players.csv
     mastersign=pd.merge(mastersign, players, how='left', on=['Plakey'], suffixes=('','_r'))
-    # Find Cabrini teams from this season needing uniforms
-    thismask = teams['Uniforms'].str.contains('y', case=False, na=False)
-    uniformteams=teams.loc[ teams['Uniforms']!='N']
-    uniformlist= uniformteams.Team.unique() 
-    uniformlist=np.ndarray.tolist(uniformlist)
+    mycols.append('School')
+    mastersign=mastersign[mycols]
+    # rename uniforms col from teams to setname (matches other uni tracking sheets)
+    teams=teams.rename(columns={'Uniforms':'Setname'})
+    # Only need teams w/ issued uniforms
+    teams=teams[ (pd.notnull(teams['Setname'])) & (teams['Setname']!='') & (teams['Setname']!='N') ]
+    uniformlist= list(teams.Team.unique())
+    # Can just eliminate any entries not in uniform deposit list
+    mastersign=mastersign[mastersign['Team'].isin(uniformlist)] # only players on teams needing uniforms
+    
+    # Need uniform set name (from team tab)
+    mastersign=pd.merge(mastersign, teams, how='left', on=['Year','Sport','Team'], suffixes=('','_r'))
+    mycols.append('Setname')
+    mastersign=mastersign[mycols]
+    # Now see if any team players already have checked out uniform of correct type
+    outset=unilist[(unilist['Location']=='out') & (unilist['Plakey']!=0)]
+    outset=outset.rename(columns={'Number':'Uniform#'})
+    mycols.append('Number','Size')
+    # Now find existing uniform deposits from paylog
+    
+    # Handle deposits by family (and need single entry per family)
+    # returns mastersign w/ deposit info interpolated
+    mastersign=processDeposits(paylog, mastersign)
     # single uniform log per season 
     contactfile='\\'+str(season)+'_'+str(year)+'_uniform_log.xlsx'
     writer=pd.ExcelWriter(cnf._OUTPUT_DIR+contactfile, engine='openpyxl',date_format='mm/dd/yy')
-    # Can just eliminate any entries not in uniform deposit list
-    mastersign=mastersign[mastersign['Team'].isin(uniformlist)] # only players on teams needing uniforms
     # Columns needed for log output
+
+    outcols=['First', 'Last', 'School', 'Issue date', 'Uniform#', 'Size', 'Deposit date',
+            'Amount', 'Deptype', 'DepComment', 'UniReturnDate', '$ returned', 
+            'Comments', 'Plakey', 'Famkey']
+    
     mycols=['First', 'Last', 'School', 'Issue date', 'Uniform#', 'Size', 'Amount', 
             'Deposit type', 'Deposit date', 'UniReturnDate', '$ returned', 
             'Comments', 'Plakey', 'Famkey']
@@ -80,7 +204,36 @@ def writeuniformlog(mastersign, teams, players, season, year, paylog):
     writer.save()
     return
 
-
+def processDeposits(paylog, mastersign):
+    ''' For uniform issue, need to handle multiple players from family and multiple
+    historical deposits together
+    
+    args:
+        paylog - payment logbook w/ non-deposit transactions filtered out
+        mastersign - signups for this season, uni issue only subset
+        
+    '''
+    fams=list(mastersign.Famkey.unique())  
+    paylog=paylog.dropna(subset=['Deposit']) # only need deposit info
+    # Need to handle the deposits by family
+    paylog=paylog[paylog['Famkey'].isin(fams)]
+    # Handle multiple entries from same family
+    dups=paylog[paylog.duplicated('Famkey')]
+    
+    # plakey merge would be easiest
+    
+    master
+    dupPlayers=
+    test=paylog[paylog.duplicated('Famkey', keep=False)]
+    famgroup=mastersign.groupby(['Famkey'])
+    famDepGroup=paylog.groupby(['Famkey'])
+    for fk, gr in famgroup:
+        # see if famkey is present in famDep
+        if fk in list(famDepGroup.groups.keys()):
+            deps=famDepGroup.get_group(fk)
+            
+        
+    
 
 #%% 
     

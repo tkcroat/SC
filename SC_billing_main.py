@@ -10,33 +10,42 @@ Created on Sat Oct  1 13:53:36 2016
 import pandas as pd
 import os, sys
 
-if 'C:\\Users\\tkc\\Documents\\Python_Scripts\\SC' not in sys.path:
-    sys.path.append('C:\\Users\\tkc\\Documents\\Python_Scripts\\SC')
-    print ('SC folder added')
-import SC_signup_functions as SC
-import SC_billing_functions as SCbill
+import pkg.SC_signup_functions as SC
+import pkg.SC_billing_functions as SCbill
+import pkg.SC_signup_google_API_functions as SCapi
+import pkg.SC_config as cnf
+#%%
 from importlib import reload
 reload(SCbill)
 
 #%%
-os.chdir('C:\\Users\\tkc\\Documents\\Python_Scripts\\SC')
-signupfile='Fall2018_signups.xlsx'
-signupfile='Winter2017_signups.xlsx'
-Mastersignups = pd.read_csv('master_signups.csv', encoding='cp437') 
-players, famcontact, SCsignup, season, year = SC.loadprocessfiles(signupfile)
+paylog = SCapi.readPaylog()
 
-teams=pd.read_excel('Teams_coaches.xlsx', sheetname='Teams')
-coaches=pd.read_excel('Teams_coaches.xlsx', sheetname='Coaches')
+payPygSheet, paylog = readPaylog() # Return as pyg sheet and as dataframe
+paylog_mod, newplayers=SCbill.matchpayment(paylog, players)
+
+new=paylog[paylog['Paykey']>=349]
+
+players, famcontact = SC.loadProcessPlayerInfo()
+Mastersignups = pd.read_csv(cnf._INPUT_DIR +'\\master_signups.csv', encoding='cp437') 
+teams=pd.read_csv(cnf._INPUT_DIR +'\\Teams_2019.csv', encoding='cp437')
+coaches=pd.read_csv(cnf._INPUT_DIR +'\\coaches.csv', encoding='cp437') 
+season='Winter'
+year=2019
+#%%  New method w/ pygsheets
+pygSheet, paylog = readPaylog()
+
+
+#%%
+# Backup of paylog to local excel file 
 
 # load old teams from any prior season/ year combination (overwrites current teams)
 teams=SCbill.loadoldteams('Spring', 2017) 
 teams=SCbill.loadoldteams(['Fall','Winter'], [2015,2016]) # load a bunch of old teams
 # Family Billing 
-#load payments from pay log
-paylog=pd.read_excel('Payment_logbook.xlsx', sheetname='Paylog')
 
 # assign existing payments to players (needed every time new payment is entered)... does not autosave
-paylog, newplayers=SCbill.matchpayment(paylog, players)
+paylog_mod, newplayers=SCbill.matchpayment(paylog, players)
 
 # save modified paylog to tab of xls file (not autosaved )
 SC.writetoxls(paylog,'Paylog','Payment_logbook.xlsx') 
@@ -47,7 +56,7 @@ teams=SCbill.loadoldteams('Fall', 2017) # load prior season's teams
 teams=SCbill.loadoldteams(['Fall','Winter'], [2016,2017])
 
 # New tk interface for send/test ebills
-ebilllist, skiplist=SCbill.sendbills_tk(Mastersignups, paylog, famcontact, players, season, yxear, teams)
+ebilllist, skiplist=SCbill.sendbills_tk(Mastersignups, paylog, famcontact, players, season, year, teams)
 
 # Create billing list for current sports season (auto-saved to file)
 kwargs={}

@@ -22,16 +22,21 @@ reload(cnf)
 os.chdir('C:\\Users\\kevin\\Documents\\Python_Scripts\\SC\\')
 os.chdir(cnf._OUTPUT_DIR)
 signupfile='Winter2017_signups.xlsx'
-signupfile='Spring2017_signups.xlsx'
+signupfile='Spring2019_signups.xlsx'
 signupfile='Fall2018_signups.xlsx'
 signupfile=cnf._INPUT_DIR +'\\Fall2019_signups.csv'
 signupfile=cnf._INPUT_DIR +'\\Fall2019_signups.xlsx'
+signupfile=cnf._INPUT_DIR +'Spring2019_signups.xlsx'
 
 
 #%% Testing new google sheets API download
 # ID and range of Winter 2019 basketball
 sheetID = '182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g'
-rangeName = 'Form Responses 1!A:AC' # include plakey/famkey manual mode
+rangeName = 'Form Responses 1!A:AC' # include plakey/famkey manual mode'
+
+# spring signups
+sheetID='1lppbr8srsVbN48RYrfRr58sd7yfUnJM21sSSx2C0mG8'
+rangeName = 'Form Responses!A:Z' # include plakey/famkey manual mode'
 
 gsignups = SCapi.downloadSignups(sheetID, rangeName)
 season='Winter'
@@ -165,7 +170,7 @@ myroster=pd.read_csv('Cabrini_VBroster2019.csv',encoding='cp437')
 PMroster=pd.read_csv('Cabrini_VBroster2019_PM.csv',encoding='cp437')
 
 alteredrows=SC.detectrosterchange(PMroster,myroster)
-alteredrows.to_csv('changed_players.csv', index=False)
+alteredrows.to_csv(cnf._OUTPUT_DIR+'\\roster_changes.csv', index=False)
 
 test=alteredrows[alteredrows['Lname']=='Chavez']
 

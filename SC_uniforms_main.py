@@ -11,6 +11,7 @@ import pkg.SC_billing_functions as SCbill
 import pkg.SC_uniform_functions as SCuni
 import pkg.SC_signup_google_API_functions as SCapi
 import pkg.SC_config as cnf
+import pkg.SC_signup_functions as SC
 
 #%%
 import pandas_utilities as pdutil
@@ -20,8 +21,8 @@ reload(SCuni)
 #%% Load of commonly-needed files
 teams=pd.read_csv(cnf._INPUT_DIR+'\\teams_2019.csv')
 Mastersignups = pd.read_csv(cnf._INPUT_DIR+'\\master_signups.csv', encoding='cp437')
-paylog=pd.read_excel(cnf._INPUT_DIR+'\\Payment_logbook.xlsx', sheetname='Paylog')
-
+players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
+paylog=SCapi.readPaylog()
 #%% Uniform inventory prior to uniform night
 # Read results of uniform inventory (
 # g-docs inventory sheet with setname, size and list of numbers (in closet)

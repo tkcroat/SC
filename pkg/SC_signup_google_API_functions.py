@@ -6,21 +6,73 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from collections import Counter
 import pandas as pd
-import pkg.SC_config as cnf
 from datetime import datetime
+import numpy as np
+import pygsheets as pyg
+
+import pkg.SC_config as cnf
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/spreadsheets.readonly']
 # SCOPES=[]
+
+
+#%%
+def readPaylog():
+    ''' Read google sheets online paylog and return as dataframe
+    and as pygsheet
+    
+    '''
+    creds = getGoogleCreds() # google.oauth2.credentials
+    gc = pyg.authorize(custom_credentials=creds) # pygsheets client
+    sheetID ='1tS5W_vh39hIJahIV6O-JrQ2afhNkqH-34CXLpcPrjZc' # paylog sheet
+    sh = gc.open_by_key(sheetID)
+    myPygSheet=sh[0]
+    mycols=myPygSheet.get_row(1) # gets column names
+    paylog=pd.DataFrame(myPygSheet.get_all_records())
+    paylog=paylog[mycols] # reorder cols 
+    
+    def convInt(val):
+        try:
+            return int(val)
+        except:
+            return np.nan
+        
+    def convDate(val):
+        try:
+            return datetime.strptime(val, '%m/%d/%Y')
+        except:
+            try:
+                return datetime.strptime(val, '%m/%d/%y')
+            except:
+                try:
+                    return datetime.strptime(val.split(' ')[0], '%Y-%m-%d')
+                except:
+                    print('Error converting', val)
+                    return val
+    paylog['Date']=paylog['Date'].apply(lambda x: convDate(x))
+    paylog['Year']=paylog['Year'].apply(lambda x: convInt(x))
+    paylog['Amount']=paylog['Amount'].apply(lambda x: convInt(x))
+    paylog['Deposit']=paylog['Deposit'].apply(lambda x: convInt(x))
+    paylog['Paykey']=paylog['Paykey'].apply(lambda x: convInt(x))
+    paylog['Famkey']=paylog['Famkey'].apply(lambda x: convInt(x))
+    paylog['Plakey']=paylog['Plakey'].apply(lambda x: convInt(x))
+    return myPygSheet, paylog
 
 def readUniList():
     ''' Read of current version of unilist (master list w each unique uniform ahd 
     person to whom it is assigned)
     '''
     sheetID ='14oedZ7BVwLP4VXMqlWnAg3nwvgW-keBfXCu17rTkNhk' # 
-    rangeName = 'Unilist!A:I'
+    rangeName = 'Unilist!A:M'
     # Read of current version of unilist from google sheets
     unilist = downloadSheet(sheetID, rangeName)
+    def convInt(val):
+        try:
+            return int(val)
+        except:
+            return np.nan
+        
     def convDate(val):
         try:
             return datetime.strptime(val, '%m/%d/%Y')
@@ -31,7 +83,9 @@ def readUniList():
                 print('Error converting', val)
                 return val
     unilist['Date']=unilist['Date'].apply(lambda x: convDate(x))
-    unilist['Number']=unilist['Number'].astype(int)
+    unilist['Plakey']=unilist['Plakey'].apply(lambda x: convInt(x))
+    unilist['PriorKey']=unilist['PriorKey'].apply(lambda x: convInt(x))
+    unilist['Number']=unilist['Number'].apply(lambda x: convInt(x))
     return unilist
 
 def readInventory():
@@ -114,6 +168,7 @@ def changeColNames(headers):
             'Parent/Guardian Last Name':'Plast1','Parent/Guardian Last Name_2':'Plast2',
             'Primary Phone':'Phone1','Primary Phone_2':'Phone2','Textable':'Text1','Textable_2':'Text2',
             'Primary Email':'Email1','Primary Email_2':'Email2',
+            'Primary Email (enter "none" if you don't use e-mail)':'Email1',
             'Would you be willing to act as a coach or assistant':'Coach',
             'Would you be willing to act as a coach or assistant_2':'Coach2',
             "Player's Uniform Size":'Unisize', 
@@ -121,7 +176,6 @@ def changeColNames(headers):
     newNames=[]
     for val in headers:
         if val in renameDict:
-            newNames.append(renameDict.get(val))
         else:
             newNames.append(val)
     unchanged=['Timestamp','Gender','Sport','Plakey','Famkey']
