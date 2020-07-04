@@ -30,6 +30,10 @@ signupfile=cnf._INPUT_DIR +'Spring2019_signups.xlsx'
 
 
 #%% Testing new google sheets API download
+# ID and range of Fall 2020
+sheetID = '1mexU5HW8Va1QXN43eN2zvHQysJINw6tdwJ7psOKmQng'
+rangeName = 'Form Responses!A:AB' # include plakey/famkey manual mode'
+
 # ID and range of Winter 2019 basketball
 sheetID = '182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g'
 rangeName = 'Form Responses 1!A:AC' # include plakey/famkey manual mode'
@@ -39,8 +43,8 @@ sheetID='1lppbr8srsVbN48RYrfRr58sd7yfUnJM21sSSx2C0mG8'
 rangeName = 'Form Responses!A:Z' # include plakey/famkey manual mode'
 
 gsignups = SCapi.downloadSignups(sheetID, rangeName)
-season='Winter'
-year=2019
+season='Fall'
+year=2020
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates
 players, famcontact, gsignups = SC.loadProcessGfiles(gsignups, season, year)
 players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
@@ -62,6 +66,8 @@ SCsignup.to_csv(signupfile,index=False) # CSV version
 # Update missing info for manually entered players (no full google drive entry info)
 SCsignup = SC.findmissinginfo(gsignups, players, famcontact)
 SCsignup = findmissinginfo(SCsignup, players, famcontact)
+
+unmatch=gsignups[pd.isnull(gsignups['Plakey'])]
 
 #%% Process data changes from google drive info... works but check/correct using log
 # email, phone, parent names, address changes (house # detection)

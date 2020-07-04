@@ -168,15 +168,27 @@ def changeColNames(headers):
             'Parent/Guardian Last Name':'Plast1','Parent/Guardian Last Name_2':'Plast2',
             'Primary Phone':'Phone1','Primary Phone_2':'Phone2','Textable':'Text1','Textable_2':'Text2',
             'Primary Email':'Email1','Primary Email_2':'Email2',
-            'Primary Email (enter "none" if you don't use e-mail)':'Email1',
+            'Primary Email (enter "None" if you do not use e-mail)':'Email1',
             'Would you be willing to act as a coach or assistant':'Coach',
             'Would you be willing to act as a coach or assistant_2':'Coach2',
             "Player's Uniform Size":'Unisize', 
             "Does your child already have an":'Unineed'}
+    # substring matching
+    rename_close={'grade level':'Grade', 'uniform size':'Unisize',
+                  'child already have':'Unineed'}
     newNames=[]
     for val in headers:
         if val in renameDict:
-        else:
+            newNames.append(renameDict.get(val))
+        elif len([i for i in list(rename_close.keys()) if i in val.lower()])>0:
+            if len([i for i in list(rename_close.keys()) if i in val.lower()])>1:
+                print('Multiple close colname matches for {}'.val)
+                newNames.append(val)
+                continue
+            else:
+                matchkey=[i for i in list(rename_close.keys()) if i in val.lower()][0]
+                newNames.append(rename_close.get(matchkey))
+        else: # not found in any rename dicts so just keep
             newNames.append(val)
     unchanged=['Timestamp','Gender','Sport','Plakey','Famkey']
     # check for invalid header names
@@ -189,7 +201,6 @@ def changeColNames(headers):
     
 def downloadSignups(sheetID, rangeName):
     ''' Download all from current season's signups
-    
     '''
     creds = getGoogleCreds() # google.oauth2.credentials
     service = build('sheets', 'v4', credentials=creds)

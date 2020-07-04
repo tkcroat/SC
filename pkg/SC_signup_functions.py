@@ -394,7 +394,6 @@ def loadProcessPlayerInfo():
     
     return players, famcontact
 
-
 def loadProcessGfiles(gsignups, season, year):
     '''Loads and processes players, family contacts and signup file, gets active 
     season and year 

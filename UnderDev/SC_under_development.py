@@ -29,6 +29,116 @@ from datetime import datetime
 import numpy as np
 
 
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jun 21 08:39:33 2020
+
+@author: Kevin
+"""
+
+#%% New pygsheets method of finding/processing new signups 
+
+def assignGsignupKey(numkeys):
+    '''
+    '''
+    if 'Gkey' not in headers:
+        # first time assignment/addition of gkey column
+    
+    usedkeys=np.ndarray.tolist(usedkeys)
+    availkeys=[i for i in allnums if i not in usedkeys]
+    if len(availkeys)<numkeys: # get more keys starting at max+1
+        needed=numkeys-len(availkeys)
+        for i in range(0,needed):
+            nextval=int(max(usedkeys)+1) # if no interior vals are available find next one
+            availkeys.append(nextval+i)
+
+def processNewGsignups(myPygSheet, newrownums):
+    '''
+    '''
+
+def downloadSignups(sheetID, rangeName):
+    ''' Download all from current season's signups
+    Using pygsheets version w/ assigned Gkey.. original forms only gets addition
+    of Gkey and Processed cols (no rename of others)
+    processed signups w/ Plakey/Famkey in separate sheet
+    
+    pygsheets short tutorial
+    https://medium.com/game-of-data/play-with-google-spreadsheets-with-python-301dd4ee36eb
+    
+    '''
+    creds = getGoogleCreds() # google.oauth2.credentials
+    gc = pyg.authorize(custom_credentials=creds) # pygsheets client
+    sh = gc.open_by_key(sheetID)
+    myPygSheet=sh[0]
+    mycols=myPygSheet.get_row(1)
+    # Can't necessarily count on rows not getting renumbered or resorted
+    if 'Gkey' not in mycols: # Initialize spreadsheet key (Gkey)
+        myPygSheet.add_cols(2) # auto adds to gsheet
+        # initialize this new row for each occupied column 
+        myPygSheet.update_col(len(mycols+1),['Gkey', 1,2,3])
+        # Find numbers of occupied rows .. timestamp always occupied for entries
+        # pygsheets is zero-indexed, but worksheet addresses start w/ 1
+        occRows = [i+1 for i,val in enumerate(myPygSheet.get_col(1)) if val !='']
+        gkeyvals=['Gkey']
+        gkeyvals.extend([str(i) for i in range(2, len(occRows)+1)])
+        # add Gkeys to this newly-added column
+        myPygSheet.update_col(len(mycols)+1,gkeyvals)
+        myPygSheet.update_col(len(mycols)+2,['Processed') # col to track processing status
+    
+    else:
+        
+        # Find rows w/ occupied timestamp entry
+        tstampRows = [i+1 for i,val in enumerate(myPygSheet.get_col(1)) if val !='']
+        # get column w/ Gkeys
+        gkeys=myPygSheet.get_col(mycols.index('Gkey'))
+        keyRows = [i+1 for i,val in enumerate(gkeys) if val !='']
+        newrownums=[i for i in tstampRows if i not in keyRows]
+        for i, nr in enumerate(newrownums):
+            if nr > max(gkeys):
+                
+            
+        if len(newrownums)>0:
+
+            
+        # Gkey and Processed cols already present
+        headers = changeColNames(mycols)        
+        gsignups=pd.DataFrame(myPygSheet.get_all_records()[1:], columns=headers)
+        newSus=gsignups[gsignups['Processed']==''] # null strings in gsheet 
+            
+            
+
+    creds = getGoogleCreds() # google.oauth2.credentials
+    service = build('sheets', 'v4', credentials=creds)
+    # Call the Sheets API
+    sheet = service.spreadsheets()
+    result = sheet.values().get(spreadsheetId=sheetID,
+                                range=rangeName).execute()
+    sh = gc.open_by_key(sheetID)
+    myPygSheet=sh[0]
+
+    mycols=myPygSheet.get_row(1) # gets column names
+    myPygSheet=sh[0]
+    mycols=myPygSheet.get_row(1) # gets column names
+
+    values = result.get('values', []) # list of lists
+    if len(values)==0:
+        print('Signup data not found')
+        return pd.DataFrame()    
+    headers = changeColNames(values[0])
+    # Google API retrieved rows each become lists truncated at last value
+    newValList=[]
+    for vallist in values[1:]:
+        while len(vallist)<len(headers):
+            vallist.append('') # add blanks for missing/optional answer
+        newEntry={}
+        for i, val in enumerate(vallist):
+            newEntry[headers[i]]= val
+        newValList.append(newEntry)
+    signups=pd.DataFrame(newValList, columns=headers)            
+    return signups    
+
+#%%
+
 def writeGsheetChanges(df, pygSheet):
     ''' 
     
