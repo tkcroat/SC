@@ -46,19 +46,19 @@ def loadtransfers(df, signups):
     df=df.rename(columns={'Fname':'First','Lname':'Last','Street':'Address','Parish':'Parish of Registration'})
     df=df.rename(columns={'Phone':'Phone1','Birthdate':'DOB','Sex':'Gender','Open/Closed':'Ocstatus'})
     # Replace Girl, Boy with m f
-    df.Gender=df.Gender.replace('F','Girl')
-    df.Gender=df.Gender.replace('M','Boy')
+    df.loc[:,'Gender']=df.Gender.replace('F','Girl')
+    df.loc[:,'Gender']=df.Gender.replace('M','Boy')
     # Manually enter sport
     print('Enter sport for transferred players')
     sport=input()
-    df['Sport']=sport
+    df.loc[:,'Sport']=sport
     df=df.dropna(subset=['First']) # remove blank rows if present
     mycols=[col for col in df if col in signups]
     df=df[mycols]
     df=formatnamesnumbers(df)
     # place date/transfer in timestamp
     mystamp=datetime.strftime(datetime.now(),'%m/%d/%y')+' transfer'
-    df['Timestamp']=mystamp
+    df.loc[:,'Timestamp']=mystamp
     mycols=signups.columns
     signups=signups.append(df, ignore_index=True)
     signups=signups[mycols]
@@ -92,17 +92,16 @@ def packagetransfers(teams, Mastersignups, famcontact, players, season, year, ac
     transSU=pd.merge(transSU, players, how='left', on=['Plakey'], suffixes=('','_r2'))
     # get division from Teams xls (for roster)
     transSU=pd.merge(transSU, teams, how='left', on=['Team'], suffixes=('','_r3')) # effectively adds other team info for roster toall players
-    transSU['Role']='Player' # add column for role
+    transSU.loc[:,'Role']='Player' # add column for role
     # transSU['Open/Closed']='Closed'
 
     # Sort by grade pre-split
-    transSU.Grade=transSU.Grade
-    transSU.Grade=transSU.Grade.replace('K',0)
-    transSU.Grade=transSU.Grade.apply(int)
+    transSU.loc[:,'Grade']=transSU.Grade.replace('K',0)
+    transSU.loc[:,'Grade']=transSU.Grade.apply(int)
     transSU=transSU.sort_values(['Grade'], ascending=True)
-    transSU.Grade=transSU.Grade.replace(0,'K') # replace K with zero to allow sorting
+    transSU.loc[:,'Grade']=transSU.Grade.replace(0,'K') # replace K with zero to allow sorting
     # Column for sorting by transferred to school
-    transSU['Transchool']=transSU['Team'].str.split('#').str[0]
+    transSU.loc[:,'Transchool']=transSU['Team'].str.split('#').str[0]
     grouped=transSU.groupby(['Sport','Transchool'])
     for [sport, school], group in grouped:
         # prepare roster tab
@@ -219,7 +218,7 @@ def makeCYCcards(df, players, teams, coaches, season, year, **kwargs):
             return 0
         else:
             return int(val)
-    teams['Grade'] = teams['Grade'].apply(lambda x:processGrade(x))
+    teams.loc[:,'Grade'] = teams['Grade'].apply(lambda x:processGrade(x))
     if not kwargs.get('otherSchools', False):
         # all transfer teams with contain # (e.g. SMOS#3G) so remove these
         # dropped by default
@@ -229,8 +228,8 @@ def makeCYCcards(df, players, teams, coaches, season, year, **kwargs):
     df=df[ df['Team'].isin(cardTeamList) ]
     df=df.sort_values(['Last'])
     # plakeys as string will be easiest for below matching
-    df['Plakey']=df['Plakey'].astype(int)
-    df['Plakey']=df['Plakey'].astype(str)
+    df.loc[:,'Plakey']=df['Plakey'].astype(int)
+    df.loc[:,'Plakey']=df['Plakey'].astype(str)
 
     def getName(gr, pk):
         # get name from plakey as string
@@ -381,13 +380,13 @@ def loadProcessPlayerInfo():
         2018)
         ''' 
     players=pd.read_csv(cnf._INPUT_DIR + '\\players.csv', encoding='cp437') # load existing player data (need to find correct DOB format)
-    players.Grade=players.Grade.replace('K',0)
-    players.Grade=players.Grade.replace('pK',0) # just make them 0s for now
-    players.Grade=players.Grade.astype(int)
+    players.loc[:,'Grade']=players.Grade.replace('K',0)
+    players.loc[:,'Grade']=players.Grade.replace('pK',0) # just make them 0s for now
+    players.loc[:,'Grade']=players.Grade.astype(int)
     # TODO use fixdates if players imports as string (various formats possible)
     # players['DOB']=players['DOB'].apply(lambda x: fixDates(x))
     if not isinstance(players.DOB[0], pd.Timestamp):# sometimes direct import to pd timestamp works, other times not
-        players.DOB=players.DOB.apply(lambda x: parseDate(x))
+        players.loc[:,'DOB']=players.DOB.apply(lambda x: parseDate(x))
 
     famcontact=pd.read_csv(cnf._INPUT_DIR + '\\family_contact.csv', encoding='cp437') # load family contact info
     famcontact=formatnamesnumbers(famcontact)
@@ -404,13 +403,13 @@ def loadProcessGfiles(gsignups, season, year):
         2018)
         ''' 
     players=pd.read_csv(cnf._INPUT_DIR + '\\players.csv', encoding='cp437') # load existing player data (need to find correct DOB format)
-    players.Grade=players.Grade.replace('K',0)
-    players.Grade=players.Grade.replace('pK',0) # just make them 0s for now
-    players.Grade=players.Grade.astype(int)
+    players.loc[:,'Grade']=players.Grade.replace('K',0)
+    players.loc[:,'Grade']=players.Grade.replace('pK',0) # just make them 0s for now
+    players.loc[:,'Grade']=players.Grade.astype(int)
     # TODO use fixdates if players imports as string (various formats possible)
     # players['DOB']=players['DOB'].apply(lambda x: fixDates(x))
     if not isinstance(players.DOB[0], pd.Timestamp):# sometimes direct import to pd timestamp works, other times not
-        players.DOB=players.DOB.apply(lambda x: parseDate(x))
+        players.loc[:,'DOB']=players.DOB.apply(lambda x: parseDate(x))
 
     famcontact=pd.read_csv(cnf._INPUT_DIR + '\\family_contact.csv', encoding='cp437') # load family contact info
     if season=='Winter':
@@ -420,13 +419,13 @@ def loadProcessGfiles(gsignups, season, year):
     if len(duplicated)>0:
         print('Remove duplicate signups for %s' %", ".join(duplicated.Last.unique().tolist()))
     gsignups=gsignups.drop_duplicates(subset=['First', 'Last','Grade','Sport'])
-    gsignups['Sport']=gsignups['Sport'].replace({'Volleyball':'VB'}, regex=True)
+    gsignups.loc[:,'Sport']=gsignups['Sport'].replace({'Volleyball':'VB'}, regex=True)
     missing=[i for i in ['Famkey','Plakey'] if i not in gsignups.columns]
     for col in missing: # add blank vals
         gsignups.loc[gsignups.index, col]=np.nan
     # convert assorted DOB strings to datetime.date
     if not isinstance(gsignups.DOB[0], pd.Timestamp):# sometimes direct import to pd timestamp works, other times not
-        gsignups.DOB=gsignups.DOB.apply(lambda x: parseDate(x))
+        gsignups.loc[:,'DOB']=gsignups.DOB.apply(lambda x: parseDate(x))
 
     # Get year from signup file name    
     outputduplicates(gsignups) # quick check of duplicates output in console window (already removed from signups)
@@ -449,23 +448,22 @@ def loadProcessGfiles(gsignups, season, year):
         else:
             return np.nan
     # ensure gsignups has only int or nan (no whitespace)
-    gsignups['Plakey']=gsignups['Plakey'].apply(lambda x: processGkey(x))
-    gsignups['Famkey']=gsignups['Famkey'].apply(lambda x: processGkey(x))
-
+    gsignups.loc[:,'Plakey']=gsignups['Plakey'].apply(lambda x: processGkey(x))
+    gsignups.loc[:,'Famkey']=gsignups['Famkey'].apply(lambda x: processGkey(x))
     return players, famcontact, gsignups
 
 def loadprocessfiles(signupfile):
     '''Loads and processes players, family contacts and signup file, gets active 
     season and year ''' 
     players=pd.read_csv(cnf._INPUT_DIR + '\\players.csv', encoding='cp437') # load existing player data (need to find correct DOB format)
-    players.Grade=players.Grade.replace('K',0)
-    players.Grade=players.Grade.replace('pK',0) # just make them 0s for now
-    players.Grade=players.Grade.astype(int)
+    players.loc[:,'Grade']=players.Grade.replace('K',0)
+    players.loc[:,'Grade']=players.Grade.replace('pK',0) # just make them 0s for now
+    players.loc[:,'Grade']=players.Grade.astype(int)
     # TODO use fixdates if players imports as string (various formats possible)
     # players['DOB']=players['DOB'].apply(lambda x: fixDates(x))
     if type(players.DOB[0])!=pd.Timestamp: # sometimes direct import to pd timestamp works, other times not
         try:
-            players.DOB=parseDate(players.DOB) # return properly converted date columns series 
+            players.loc[:'DOB']=parseDate(players.DOB) # return properly converted date columns series 
         except:
             print('Failure converting player DOB to datetime/timestamp')
     famcontact=pd.read_csv(cnf._INPUT_DIR + '\\family_contact.csv', encoding='cp437') # load family contact info
@@ -535,9 +533,8 @@ def organizeroster(df):
     df=df.rename(columns={'Parish_residence':'Parish of Residence','Phone1':'Phone','DOB':'Birthdate','Gender':'Sex'})
     df=df.rename(columns={'Email1':'Email'})
     # replace Girl, Boy with m f
-    df.Sex=df.Sex.replace('Girl','F')
-    df.Sex=df.Sex.replace('Boy','M')
-    df.Sex=df.Sex.str.upper() # ensure uppercase
+    df.loc[:,'Sex']=df.Sex.replace('Girl','F').replace('Boy','M')
+    df.loc[:,'Sex']=df.Sex.str.upper() # ensure uppercase
     # Convert date format to 8/25/2010 string format
     mycols=['Fname', 'Lname', 'Street', 'City', 'State', 'Zip', 'Phone', 'Email', 'Birthdate', 'Sex', 'Role', 'Division', 'Grade', 'Team', 'School', 'Parish of Registration', 'Parish of Residence', 'Coach ID']
     df=df[mycols] # put back in desired order
@@ -1123,14 +1120,14 @@ def prepcontacts(df):
     'Text4', 'Email1','Email2', 'Email3']
     for i, col in enumerate(mycols):
         try:
-            df[col]=df[col].str.strip()
+            df.loc[:,col]=df[col].str.strip()
         except: # maybe only nan or not present (i.e. in signups)
             pass
     mycols=['Text1','Text2','Text3']
     for i, col in enumerate(mycols):
         try:
-            df[col]=df[col].str.replace('No','N', case=False)
-            df[col]=df[col].str.replace('Yes','Y', case=False)
+            df.loc[:,col]=df[col].str.replace('No','N', case=False)
+            df.loc[:,col]=df[col].str.replace('Yes','Y', case=False)
         except:
             pass
     return df
@@ -1162,11 +1159,10 @@ def findyearseason(df):
 def outputduplicates(df):
     '''Prints out names of players with duplicated entries into console... can then delete from google drive signups '''
     tempdf=df[df.duplicated(['First','Last','Sport'])] # series with 2nd of duplicated entries as True
-    for i in range(0,len(tempdf)):
-        if tempdf[i]==True: # Series marking duplicates
-            first=df.iloc[i]['First']
-            last=df.iloc[i]['Last']
-            print('Duplicated signup for player: ', first,' ', last)
+    firsts=tempdf.First.tolist()
+    lasts=tempdf.Last.tolist()
+    for f,l in zip(firsts, lasts):
+        print('Duplicated signup for player: {} {}'.format(f,l))
     return
 
 def formatphone(df):
@@ -1196,12 +1192,12 @@ def formatphone(df):
     # find phone columns (named phone, phone2, etc.)
     phlist=[str(s) for s in df.columns if 'Phone' in s]
     for col in phlist:
-        df[col]=df[col].apply(lambda x: phoneFormat(x))
+        df.loc[:,col]=df[col].apply(lambda x: phoneFormat(x))
     # now change yes in any text field to Y
     txtlist=[str(s) for s in df.columns if 'Text' in s]
     for col in txtlist:
-        df[col]=df[col].replace('yes','Y')
-        df[col]=df[col].replace('Yes','Y')
+        df.loc[:,col]=df[col].replace('yes','Y')
+        df.loc[:,col]=df[col].replace('Yes','Y')
     return df
     
 def standardizeschool(df):
@@ -1228,16 +1224,16 @@ def formatnamesnumbers(df):
     processCols=['First','Last','Family','Pfirst1','Plast1','Pfirst2','Plast2','Email','Email2']
     processCols=[i for i in processCols if i in df.columns]
     for col in processCols:
-        df[col]=df[col].apply(lambda x: titleStrip(x))
+        df.loc[:, col]=df[col].apply(lambda x: titleStrip(x))
 
     if 'Gender' in df:        
-        df.Gender=df.Gender.replace('Girl','f')
-        df.Gender=df.Gender.replace('Boy','m')  
+        df.loc[:,'Gender']=df.Gender.replace('Girl','f')
+        df.loc[:,'Gender']=df.Gender.replace('Boy','m')  
     if 'Grade' in df:
-        df.Grade=df.Grade.replace('K',0)
-        df.Grade=df.Grade.replace('pK',0)
+        df.loc[:,'Grade']=df.Grade.replace('K',0)
+        df.loc[:,'Grade']=df.Grade.replace('pK',0)
         try:
-            df.Grade=df.Grade.astype(int)
+            df.loc[:,'Grade']=df.Grade.astype(int)
         except:
             print('Player grade likely missing from raw signup file... enter manually')
     df=formatphone(df) # call phone reformatting string
@@ -1250,7 +1246,7 @@ def graduate_players(players, year):
     ''' Recalc grade based on grade adjustment, school year (run once per year in fall) and age.  
     some player grades will already have been updated (generally google drive entries)... however recalc shouldn't
     change grade ''' 
-    players.Grade=players.Grade.replace('K',0)
+    players.loc[:,'Grade']=players.Grade.replace('K',0)
     for index,row in players.iterrows():
         # replace K with zero         
         grade=int(players.iloc[index]['Grade']) # get currently listed grade
@@ -1269,7 +1265,7 @@ def graduate_players(players, year):
             last=players.iloc[index]['Last']
             print('Grade changed from',grade,'to',newgrade,'for', first, last)
             players.loc[index, 'Grade'] = newgrade
-    players.Grade=players.Grade.replace(0,'K')
+    players.loc[:,'Grade']=players.Grade.replace(0,'K')
     return players
 
 def removeEmptyFams(players, famcontact):
@@ -1336,9 +1332,9 @@ def updateoldteams(teams, year):
         return teams # pass back unaltered
     # temporarily make the K to 0 replacements
     teams.Grade=teams.Grade.replace('K',0)
-    teams['Graderange']=teams['Graderange'].astype(str) # convert all to string
-    teams['Year']=year
-    teams['Grade']+=1    
+    teams.loc[:'Graderange']=teams['Graderange'].astype(str) # convert all to string
+    teams.loc[:,'Year']=year
+    teams.loc[:,'Grade']+=1    
     for index, row in teams.iterrows():
         grade=teams.loc[index]['Grade']
         div=teams.loc[index]['Division'] # division must match grade
@@ -1362,7 +1358,7 @@ def updateoldteams(teams, year):
 
 def splitcoaches(df):
     ''' Pass CYC teams list, split and duplicate rows with comma separated vals in colname for extra coaches'''    
-    df['Role']='Coach' # add col for head or asst (first entry for head coach)
+    df.loc[:,'Role']='Coach' # add col for head or asst (first entry for head coach)
     # df['Open/Closed']='Closed'
     assistants=df.dropna(subset=['AssistantIDs']) # drop teams w/ no asst coaches
     for index, rows in assistants.iterrows():
@@ -1407,9 +1403,9 @@ def countteamplayers(df, teams, season, year):
     df=df[df['Sport'].isin(sportlist)] # only this sports season
     df.Grade=df.Grade.replace('K',0)
     df.Grade=df.Grade.astype('int')  
-    teams.Grade=teams.Grade.replace('K',0)
-    teams.Grade=teams.Grade.astype('int')
-    teams.Playerlist=teams.Playerlist.astype('str')
+    teams.loc[:,'Grade']=teams.Grade.replace('K',0)
+    teams.loc[:,'Grade']=teams.Grade.astype('int')
+    teams.loc[:,'Playerlist']=teams.Playerlist.astype('str')
     for index, row in teams.iterrows():
         teamname=teams.loc[index]['Team']
         match=df[df['Team']==teamname] # all players on this team from master_signups
@@ -1448,13 +1444,12 @@ def writecontacts(df, famcontact, players, season, year):
     # get school from players.csv
     df=pd.merge(df, players, how='left', on=['Plakey'], suffixes=('','_r3'))
     # Sort by grade pre-split
-    df.Grade=df.Grade
-    df.Grade=df.Grade.replace('K',0)
-    df.Grade=df.Grade.apply(int)
+    df.loc[:,'Grade']=df.Grade.replace('K',0)
+    df.loc[:,'Grade']=df.Grade.apply(int)
     df=df.sort_values(['Grade'], ascending=True)
-    df.Grade=df.Grade.replace(0,'K') # replace K with zero to allow sorting
-    df.Team=df.Team.replace(np.nan,'None') # still give contacts if team not yet assigned
-    df.Team=df.Team.replace('','None')
+    df.loc[:,'Grade']=df.Grade.replace(0,'K') # replace K with zero to allow sorting
+    df.loc[:,'Team']=df.Team.replace(np.nan,'None') # still give contacts if team not yet assigned
+    df.loc[:,'Team']=df.Team.replace('','None')
     # Standard sport contacts output for soccer, VB, basketball
     if season!='Spring':
         for i, sport in enumerate(sportlist):
@@ -1544,8 +1539,8 @@ def makegoogcont(df, famcontact, players, season, year):
             thisteam=Thissport[Thissport['Team'].str.contains(team)]
             # Drop duplicate from same family
             thisteam=thisteam.drop_duplicates('Phone1')
-            thisteam['Name']=thisteam['First']+' '+thisteam['Last']
-            thisteam['Group']=sport+str(year)
+            thisteam.loc[:,'Name']=thisteam['First']+' '+thisteam['Last']
+            thisteam.loc[:,'Group']=sport+str(year)
             mycols=['Name','Pfirst1','Last','Phone1','Phone2','Email1','Email2','Group']
             newcols=['Name','Additional Name','Family Name','Phone 1 - Value','Phone 2 - Value',
             'E-mail 1 - Value','E-mail 2 - Value','Group Membership']
@@ -1565,7 +1560,7 @@ def createsignups(df, Mastersignups, season, year):
     # Use comma sep on multiple sport entries?? 
     now=datetime.now()
     thisdate=date.strftime(now,'%m/%d/%Y') # for signup date
-    df['SUdate']=thisdate # can do this globally although might also add to signups
+    df.loc[:,'SUdate']=thisdate # can do this globally although might also add to signups
     startlen=len(Mastersignups) # starting number of signups 
     intcols=['SUkey','Year']
     for i, col in enumerate(intcols):
@@ -1600,9 +1595,9 @@ def createsignups(df, Mastersignups, season, year):
     for index, row in neededkeys.iterrows():
         Mastersignups.loc[index,'SUkey'] = availSUkeys[keycounter] # reassign SU key in source master list
         keycounter+=1 # move to next available key
-    Mastersignups.Grade=Mastersignups.Grade.replace('K',0)
+    Mastersignups.loc[:,'Grade']=Mastersignups.Grade.replace('K',0)
     Mastersignups=Mastersignups.sort_values(['Year', 'Sport', 'Gender','Grade'], ascending=False) 
-    Mastersignups.Grade=Mastersignups.Grade.replace(0,'K')
+    Mastersignups.loc[:,'Grade']=Mastersignups.Grade.replace(0,'K')
     # autocsvbackup(Mastersignups,'master_signups', newback=True)    
     Mastersignups.to_csv(cnf._INPUT_DIR + '\\master_signups.csv', index=False, date_format='mm/dd/yy') # automatically saved
     return Mastersignups
@@ -1614,9 +1609,9 @@ def replaceacro(df, acronyms):
         acro=acronyms.loc[index]['acronym']
         transl=acronyms.loc[index]['translation']
         # TODO only for parish columns 
-        df['Parish of Registration']=df['Parish of Registration'].replace(acro, transl)
-        df['Parish of Residence']=df['Parish of Residence'].replace(acro, transl)
-        df['School']=df['School'].replace(acro, transl)
+        df.loc[:,'Parish of Registration']=df['Parish of Registration'].replace(acro, transl)
+        df.loc[:,'Parish of Residence']=df['Parish of Residence'].replace(acro, transl)
+        df.loc[:,'School']=df['School'].replace(acro, transl)
     return df
 
 def createrosters(df, season, year, players, teams, coaches, famcontact, acronyms):
@@ -1658,9 +1653,9 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
     df=pd.merge(df, teams, how='left', on=['Team'], suffixes=('','_r2')) # effectively adds other team info for roster toall players
     # DOB, School  from players.csv
     df=pd.merge(df, players, how='left', on=['Plakey'], suffixes=('','_r3'))        
-    df['Role']='Player' # add column for role
+    df.loc[:,'Role']='Player' # add column for role
     # df['Open/Closed']=np.nan
-    df['Coach ID']=''
+    df.loc[:,'Coach ID']=''
     
     def formatDOB(val):
         # Pat moore date format is 4/4/19.. reformat as string for csv output
@@ -1689,7 +1684,7 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
             Sportroster=Sportroster.sort_values(['Team','Role','Grade','Lname'])
             fname=cnf._OUTPUT_DIR+'\\Cabrini_'+sport+'roster'+str(year)+'.csv'
             Sportroster=replaceacro(Sportroster, acronyms) # replace abbreviations
-            Sportroster['Birthdate']=Sportroster['Birthdate'].apply(lambda x: formatDOB(x))
+            Sportroster.loc[:,'Birthdate']=Sportroster['Birthdate'].apply(lambda x: formatDOB(x))
             Sportroster.to_csv(fname, index=False)
         # done with Cabrini CYC rosters
 
@@ -1708,7 +1703,7 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
         Transferroster=Transferroster.sort_values(['Team', 'Sex', 'Grade'], ascending=True)
         fname=cnf._OUTPUT_DIR+'\\CYC'+sport+'transfers.csv'
         Transferroster=replaceacro(Transferroster,acronyms)
-        Transferroster['Birthdate']=Transferroster['Birthdate'].apply(lambda x: formatDOB(x))
+        Transferroster.loc[:,'Birthdate']=Transferroster['Birthdate'].apply(lambda x: formatDOB(x))
         Transferroster.to_csv(fname, index=False)        
     # Now deal with junior cabrini (should be only thing left after Cabrini CYC< 
     # transfers, special sports
@@ -1720,10 +1715,10 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
     if len(Juniorteams)>0:
         Juniorteams=organizeroster(Juniorteams) # put in standard South Central roster format
         # Calculate current age from DOBs (renamed to Birthdate for roster only)
-        Juniorteams['Age']=calcage(Juniorteams['Birthdate'])
+        Juniorteams.loc[:,'Age']=calcage(Juniorteams['Birthdate'])
         fname=cnf._OUTPUT_DIR+'\\Cabrini_junior_teams_'+str(year)+'.csv'
         Juniorteams=replaceacro(Juniorteams, acronyms)
-        Juniorteams['Birthdate']=Juniorteams['Birthdate'].apply(lambda x: formatDOB(x))
+        Juniorteams.loc[:,'Birthdate']=Juniorteams['Birthdate'].apply(lambda x: formatDOB(x))
         Juniorteams.to_csv(fname, index=False)
 
     # Deal with special cases -Track and Chess
@@ -1737,7 +1732,7 @@ def createrosters(df, season, year, players, teams, coaches, famcontact, acronym
         mycols=['First', 'Last','Gender','Team','Grade','Birthdate','School','Address','Zip']
         Specials=Specials[mycols]
         Specials=Specials.sort_values(['Gender', 'Birthdate', 'Grade'], ascending=True)
-        Specials['Birthdate']=Specials['Birthdate'].apply(lambda x: formatDOB(x))
+        Specials.loc[:,'Birthdate']=Specials['Birthdate'].apply(lambda x: formatDOB(x))
         fname= cnf._OUTPUT_DIR+'\\'+ sport+'_'+str(year)+'_rosters.csv'
         Specials.to_csv(fname, index=False)   
     return    
@@ -1764,11 +1759,11 @@ def makemultiteam(df):
             newrow=kteams.loc[index] # grabs row as series
             newrow.loc['Grade'] = gr # set to correct grade
             xtrateams=xtrateams.append(newrow) # add single row to temp df
-    df.Grade=df.Grade.replace('K','0', regex=True)
+    df.loc[:,'Grade']=df.Grade.replace('K','0', regex=True)
 
     # get rid of K string problem
-    df.Graderange=df.Graderange.replace('K','0', regex=True)
-    df.Graderange=df.Graderange.astype('int')
+    df.loc[:,'Graderange']=df.Graderange.replace('K','0', regex=True)
+    df.loc[:,'Graderange']=df.Graderange.astype('int')
     # now handle numbered multiteams (e.g. 45 78 two digit ints)    
     multiteams=df.loc[df['Graderange']>9] # subset of teams comprised of multiple grades
     for index, row in multiteams.iterrows(): # check for 3 or more grades
@@ -1808,11 +1803,11 @@ def detectrosterchange(PMroster, myroster):
             return val[1:]
         else:
             return val
-    myroster['Birthdate']=myroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
-    PMroster['Birthdate']=PMroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
+    myroster.loc[:,'Birthdate']=myroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
+    PMroster.loc[:,'Birthdate']=PMroster['Birthdate'].apply(lambda x:pd.to_datetime(x).strftime('%m/%d/%Y'))
 
-    myroster['Birthdate']=myroster['Birthdate'].apply(lambda x:removeLeadZero(x))
-    PMroster['Birthdate']=PMroster['Birthdate'].apply(lambda x:removeLeadZero(x))
+    myroster.loc[:,'Birthdate']=myroster['Birthdate'].apply(lambda x:removeLeadZero(x))
+    PMroster.loc[:,'Birthdate']=PMroster['Birthdate'].apply(lambda x:removeLeadZero(x))
 
     bothrosters=pd.concat([PMroster,myroster])
     bothrosters=bothrosters.sort_values(['Fname','Lname'])
@@ -1839,9 +1834,9 @@ def assigntoteams(df, season, year, teams, overwrite=False):
     # twoteams is multiple teams for same grade
     Teamsmult, Twoteams =makemultiteam(teams) # makes duplicates team entries to match both grades
     # compare grades as ints with K=0 
-    df.Grade=df.Grade.replace('K','0', regex=True) # convert Ks to zeros
-    df['Grade']=df['Grade'].astype('int')
-    Teamsmult['Grade']=Teamsmult['Grade'].astype('int') # ensure these are ints
+    df.loc[:,'Grade']=df.Grade.replace('K','0', regex=True) # convert Ks to zeros
+    df.loc[:,'Grade']=df['Grade'].astype('int')
+    Teamsmult.loc[:,'Grade']=Teamsmult['Grade'].astype('int') # ensure these are ints
     # left merge keeps all master_signups oentries
     df=pd.merge(df, Teamsmult, how='left', on=['Year','Grade','Gender','Sport'], suffixes=('','_r'))
     # need to drop SUkey duplicates (keeping first)... occurs if >1 team per grade
@@ -1869,9 +1864,9 @@ def assigntoteams(df, season, year, teams, overwrite=False):
     # now drop extra columns and sort 
     mycols=['SUkey','First', 'Last', 'Grade', 'Gender', 'Sport', 'Year', 'Team', 'Plakey','Famkey', 'Family', 
     'SUdate', 'Issue date', 'Uniform#','UniReturnDate'] 
-    df.Grade=df.Grade.replace('K',0)
+    df.loc[:,'Grade']=df.Grade.replace('K',0)
     df=df.sort_values(['Year','Sport', 'Gender', 'Grade'], ascending=True)
-    df.Grade=df.Grade.replace('0','K', regex=True) # make sure any 0 grades are again replaced with K
+    df.loc[:,'Grade']=df.Grade.replace('0','K', regex=True) # make sure any 0 grades are again replaced with K
     df=df[mycols]
     autocsvbackup(df,'master_signups', newback=True) # autobackup of master signups
     df.to_csv(cnf._INPUT_DIR + '\\master_signups.csv', index=False) # save/overwrite existing csv
@@ -1927,7 +1922,7 @@ def readbackevents(trackevents):
     events=['50M', '100M', '200M', '400M', '800M', '1600M', 'SoftThrow', 
             'ShotPut','StdLongJump', 'RunLongJump']
     regfile=pd.DataFrame(columns=regcols)
-    regfile['Team Code']=='SFC'
+    regfile.loc[:,'Team Code']=='SFC'
     for index, row in trackevents.iterrows():
         # get events for which player is signed up
         playerevents=[]
@@ -2010,9 +2005,9 @@ def findrecruits(df, players, famcontact, season, year, signupfile):
                 match=match[0:1] # take only last season's signup
                 Recruits=pd.concat([Recruits,match], ignore_index=True)
     # plakey, famkey, first, last, grade, gender, 
-    Recruits.Grade=Recruits.Grade.replace('K',0) # replace K with zero to allow sorting
-    Recruits.Grade=Recruits.Grade.astype(int)
-    Recruits.Grade=Recruits.Grade+1 # adjust to correct grade for this year 
+    Recruits.loc[:,'Grade']=Recruits.Grade.replace('K',0) # replace K with zero to allow sorting
+    Recruits.loc[:,'Grade']=Recruits.Grade.astype(int)
+    Recruits.loc[:,'Grade']=Recruits.Grade+1 # adjust to correct grade for this year 
     # Drop if graduated
     Recruits=Recruits[Recruits['Grade']<=8]
     # adjust grade such that players current grade is in list
@@ -2026,9 +2021,9 @@ def findrecruits(df, players, famcontact, season, year, signupfile):
             'Parish_registration', 'Sport', 'Phone1', 'Text1','Email1', 'Phone2', 
             'Text2', 'Email2', 'Plakey', 'Famkey', 'Family'] 
     Recruits=Recruits[mycols]
-    Recruits.Grade=Recruits.Grade.replace('K',0)
+    Recruits.loc[:,'Grade']=Recruits.Grade.replace('K',0)
     Recruits=Recruits.sort_values(['Grade'], ascending=True)
-    Recruits.Grade=Recruits.Grade.replace(0,'K') # replace K with zero to allow sorting
+    Recruits.loc[:,'Grade']=Recruits.Grade.replace(0,'K') # replace K with zero to allow sorting
     
     Recruits=Recruits.sort_values(['Sport', 'Gender', 'Grade'], ascending=True)
     # now write recruits to tab in master signups file
@@ -2073,8 +2068,8 @@ def summarizesignups(df, season, year, **kwargs):
         CurrentSU=df # single season signup
         sports=CurrentSU.Sport.unique().tolist()
     # Replace K with 0
-    CurrentSU.Grade=CurrentSU.Grade.replace('K',0)
-    CurrentSU.Grade=CurrentSU.Grade.astype(int) # convert all to int for sorting
+    CurrentSU.loc[:,'Grade']=CurrentSU.Grade.replace('K',0)
+    CurrentSU.loc[:,'Grade']=CurrentSU.Grade.astype(int) # convert all to int for sorting
     if 'Team' in CurrentSU: # remove drops if using mastersignups
         CurrentSU=CurrentSU[CurrentSU['Team']!='drop']
     # loop through sport, gender, grade
@@ -2655,7 +2650,7 @@ def assignteams(df, Teams):
     Teamsmult, Twoteams =makemultiteam(Teams) # makes duplicates team entries to match both grades
     Teamsmult['Grade']=Teamsmult['Grade'].astype('str') # convert grade back to string
     Teamsmult.Grade=Teamsmult.Grade.replace('K','0', regex=True) # convert Ks to grade 0
-    df['Grade']=df['Grade'].astype('str') # these summaries already have K as grade 0
+    df.loc[:,'Grade']=df['Grade'].astype('str') # these summaries already have K as grade 0
     # left merge keeps all master_signups entries
     df=pd.merge(df, Teamsmult, how='left', on=['Grade','Gender','Sport'], suffixes=('','_r'))
     # now copy over CYC team name from Teams_coaches to this df ... skip copying if null
