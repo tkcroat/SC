@@ -419,7 +419,10 @@ def loadProcessGfiles(gsignups, season, year):
     if len(duplicated)>0:
         print('Remove duplicate signups for %s' %", ".join(duplicated.Last.unique().tolist()))
     gsignups=gsignups.drop_duplicates(subset=['First', 'Last','Grade','Sport'])
-    gsignups.loc[:,'Sport']=gsignups['Sport'].replace({'Volleyball':'VB'}, regex=True)
+    
+    gsignups.loc[:,'Sport']=gsignups['Sport'].str.replace('Volleyball','VB')
+    #gsignups.loc[:,'Sport']=gsignups.loc[:,'Sport'].str.replace('Volleyball','VB').copy()
+    #gsignups.loc[:,'Sport']=gsignups['Sport'].replace({'Volleyball':'VB'}, regex=True).copy()
     missing=[i for i in ['Famkey','Plakey'] if i not in gsignups.columns]
     for col in missing: # add blank vals
         gsignups.loc[gsignups.index, col]=np.nan
@@ -1552,8 +1555,16 @@ def makegoogcont(df, famcontact, players, season, year):
     return
 
 def createsignups(df, Mastersignups, season, year):     
-    ''' pass signups and add signups to master list, also returns list of current player keys by sport
-    typically use writesignupstoExcel instead
+    ''' pass signups and add signups to master list, also returns list of current 
+    player keys by sport; typically use writesignupstoExcel instead
+    args:
+        df - signup (dataframe)
+        Mastersignups - existing all signups db-like file
+        season - ['Fall','Winter','Spring']
+        year- 4 digit year as int
+    returns:
+        Mastersignups - same with new unique entries
+        
     '''   
     sportsdict={'Fall':['VB','Soccer'], 'Winter':['Basketball'],'Spring':['Track','Softball','Baseball','T-ball']}
     sportlist=sportsdict.get(season) 
@@ -2044,63 +2055,52 @@ def findrecruits(df, players, famcontact, season, year, signupfile):
 def summarizesignups(df, season, year, **kwargs):
     '''Write out summary to date of players by sport, gender, grade with 
     abbreviated playerlist
+    
+    args:
+        df -either Mastersignups (split by discrete sport) or gsignups
     can work on either Mastersignups or single season signup
     
     kwargs: 'XLSpath': path to xls signup file (save as separate sheet here)
         'toDf': don't save ... return as dataframe
     '''
+    sportsdict={'Fall':['VB','Soccer'], 'Winter':['Basketball'],
+                'Spring':['Track','Softball','Baseball','T-ball']}
+    sportlist=sportsdict.get(season) 
+
     mycols=['Sport','Gender','Grade','Number','Playerlist','Plakeys']
     sportsum=pd.DataFrame(columns=mycols)
     # Determine if this is mastersignups (or single season raw signup file)
     if 'Basketball' in df.Sport.unique() and 'Track' in df.Sport.unique():
-        df=df[(df['Year']==year)] # this year only
-        df=df.reset_index(drop=True)
-        if season=='Fall':
-            sports=['VB', 'Soccer']        
-            CurrentSU=df[df.Sport.isin(sports)]
-        if season=='Winter':
-            sports=['Basketball']        
-            CurrentSU=df[df.Sport.isin(sports)] # winter (bball) signups
-        if season=='Spring':
-            sports=['Track','Softball','Baseball', 'T-ball']
-            CurrentSU=df[df.Sport.isin(sports)]
-    else:
-        CurrentSU=df # single season signup
-        sports=CurrentSU.Sport.unique().tolist()
+        CurrentSU=df[(df['Year']==year)].copy() # this year only
+        CurrentSU=CurrentSU.reset_index(drop=True)
+        CurrentSU=CurrentSU[CurrentSU.Sport.isin(sportlist)]
+        if 'Team' in CurrentSU: # remove drops if using mastersignups
+            CurrentSU=CurrentSU[CurrentSU['Team']!='drop']
+    else: # this season's signups
+        CurrentSU=pd.DataFrame(columns=df.columns)
+        for i, sport in enumerate(sportlist):
+            # Use caution here due to Tball in Softball string problem (currently set to T-ball)
+            thissport=df.loc[df['Sport'].str.contains(sport, na=False, case=False)].copy() # also handles multi-sports
+            # Prepare necessary columns
+            thissport.loc[:, 'Sport'] = sport 
+            thissport.loc[:, 'Year'] = int(year)
+            CurrentSU=pd.concat([thissport,CurrentSU], ignore_index=True)
+            
     # Replace K with 0
     CurrentSU.loc[:,'Grade']=CurrentSU.Grade.replace('K',0)
     CurrentSU.loc[:,'Grade']=CurrentSU.Grade.astype(int) # convert all to int for sorting
-    if 'Team' in CurrentSU: # remove drops if using mastersignups
-        CurrentSU=CurrentSU[CurrentSU['Team']!='drop']
-    # loop through sport, gender, grade
-    for i, sport in enumerate(sports):
-        thismask = CurrentSU['Sport'].str.contains(sport, na=False, case=False)
-        thissport=CurrentSU.loc[thismask]
-        genders=thissport.Gender.unique()
-        for j, gend in enumerate(genders):
-            thisgensport=thissport[thissport['Gender']==gend]
-            grades=thisgensport.Grade.unique()
-            for k, grade in enumerate(grades):
-                # create single rowed df for this sport-gender-grade
-                theseplayers=thisgensport[thisgensport['Grade']==grade] # for getting player list
-                playerlist=[] # first l. for all in gender grade 
-                plakeylist=[]
-                for ind, ro in theseplayers.iterrows():
-                    first=theseplayers.loc[ind]['First']
-                    last=theseplayers.loc[ind]['Last']
-                    strname=str(first)+' ' +str(last)
-                    playerlist.append(strname)
-                    plakeylist.append(theseplayers.loc[ind]['Plakey'])
-                thisgendergrade=pd.DataFrame(index=np.arange(0,1),columns=mycols)
-                thisgendergrade.loc[0,'Sport'] = sport
-                thisgendergrade.loc[0,'Gender'] = gend
-                thisgendergrade.loc[0,'Grade'] = grade
-                thisgendergrade.loc[0,'Number'] = len(playerlist)
-                thisgendergrade.loc[0,'Playerlist'] = playerlist
-                thisgendergrade.loc[0,'Plakeys'] = plakeylist
-                sportsum=sportsum.append(thisgendergrade) # adds row to 
+
+    grouped=CurrentSU.groupby( ['Sport','Gender','Grade'])
+    sportsum=[]
+    for (sp, gen, grade),gr in grouped:
+        thisEnt={'Sport':sp,'Gender':gen,'Grade': grade,'Number':len(gr)}
+        thisEnt['Plakeys']=", ".join([str(i) for i in gsignups.Plakey.unique().tolist() if str(i)!='nan'])
+        thisEnt['Playerlist']=", ".join([i+' '+j for i,j in zip(gr.First.tolist(), gr.Last.tolist())])
+        sportsum.append(thisEnt)
+    sportsum=pd.DataFrame(sportsum)
     sportsum=sportsum.sort_values(['Sport','Gender','Grade'])
     sportsum.Grade=sportsum.Grade.replace(0,'K')
+    sportsum=sportsum[['Sport','Gender','Grade','Number','Playerlist','Plakeys']]
     if kwargs.get('toDf'): # don't save ... return as dataframe
         return sportsum
     # now write recruits to tab in master signups file
@@ -2117,6 +2117,30 @@ def summarizesignups(df, season, year, **kwargs):
         fname="%s\\%s_%i_signup_summary.csv" %(cnf._OUTPUT_DIR, season, year)
         sportsum.to_csv(fname,index=False) 
     return
+
+def findCoaches(gsignups, **kwargs):
+    ''' Find possible coaches for selected gender/grades and sort yes/maybe/only 
+    args:
+        gsignups -- google drive downloaded signups
+    kwargs:
+        gradeGenders -- list of gender grades
+    '''
+    # Remove no and blanks
+    gsignups.Coach=gsignups.Coach.replace('','No')
+    gsignups.Coach2=gsignups.Coach2.replace('','No')
+    nocoach=gsignups[(gsignups.Coach=='No') & (gsignups.Coach=='No')]
+    coaches=gsignups[~gsignups.index.isin(nocoach.index)].copy()
+    # Filter down to requested genders-grades
+    if 'gradeGenders' in kwargs:
+        keep=[]
+        for gr,gen in kwargs.get('gradeGenders'):
+            keep.extend(coaches[(coaches['Gender']==gen) & (coaches['Grade']==gr)].index.tolist())
+    coaches=coaches[coaches.index.isin(keep)]
+    mycols=['Gender', 'Grade', 'Sport','Coach','Pfirst1', 'Plast1', 'Phone1', 'Text1', 
+        'Email1', 'First', 'Last', 'School', 'Pfirst2', 'Plast2', 'Coach2', 'Phone2', 
+        'Text2', 'Email2']
+    coaches=coaches[mycols]
+    return coaches
 
 def findmissinginfo(df, players, famcontact):
     ''' Using player and family keys, update nan values in SC signups (mainly 

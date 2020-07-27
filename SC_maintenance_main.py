@@ -5,7 +5,11 @@ Created on Wed Aug 23 09:14:51 2017
 
 @author: tkc
 """
+# Standardize schools to match Pat Moore table
+players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
 
+# Load Pat Moore necessary school matching table
+Schoo
 
 # Run these occasionally to possibly clean up underlying data
 # Update grades based on school year and gradeadj (run at beginning of school year)

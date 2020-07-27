@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Created on Sun May 22 10:25:19 2016
@@ -49,6 +50,12 @@ year=2020
 players, famcontact, gsignups = SC.loadProcessGfiles(gsignups, season, year)
 players, famcontact = SC.loadProcessPlayerInfo() # version w/o signup processing
 
+# Preliminary summary of signups (w/o ID or master signups assignments)
+
+coach=SC.findCoaches(gsignups, **{'gradeGenders':
+    [ [0,'m'],[0,'f'],[1,'m'],[1,'f']] }) # Co-ed K-1 team
+coach=SC.findCoaches(gsignups) # coach candidates all grade/genders
+
 #%%
 
 # Find player number and assign to signup rows
@@ -84,6 +91,8 @@ Mastersignups = SC.createsignups(gsignups, Mastersignups, season, year) # new si
 SC.summarizesignups(Mastersignups, season, year, **{'XLSpath':signupfile}) # write to tab in excel signup file
 SC.summarizesignups(Mastersignups, season, year, **{'saveCSV':True}) # save to season_yr_signup_summary.csv (not Excel)
 # gsignups version
+# TODO make a summary tool before/without adding to master signups
+# Feasibility before official signup, but needs split of multiple signups
 sportsumm=SC.summarizesignups(gsignups, season, year, **{'toDf':True})
 SC.summarizesignups(gsignups, season, year) # save to csv
 SC.summarizesignups(gsignups, season, year, **{'XLSpath':signupfile}) # save to sheet in xls signup
