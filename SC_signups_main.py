@@ -31,9 +31,9 @@ signupfile=cnf._INPUT_DIR +'Spring2019_signups.xlsx'
 
 
 #%% Testing new google sheets API download
-# ID and range of Fall 2020
+# ID and range of Fall 2020 (up to Gkey)
 sheetID = '1mexU5HW8Va1QXN43eN2zvHQysJINw6tdwJ7psOKmQng'
-rangeName = 'Form Responses!A:AB' # include plakey/famkey manual mode'
+rangeName = 'Form Responses!A:AX' # get allinclude plakey/famkey manual mode'
 
 # ID and range of Winter 2019 basketball
 sheetID = '182QFOXdz0cjQCTlxl2Gb9b_oEqInH93Peo6EKkKod-g'
@@ -44,6 +44,7 @@ sheetID='1lppbr8srsVbN48RYrfRr58sd7yfUnJM21sSSx2C0mG8'
 rangeName = 'Form Responses!A:Z' # include plakey/famkey manual mode'
 
 gsignups = SCapi.downloadSignups(sheetID, rangeName)
+# TODO write unique Gkey column... assign values 
 season='Fall'
 year=2020
 # Load signups,player and family contact info; format names/numbers, eliminate duplicates

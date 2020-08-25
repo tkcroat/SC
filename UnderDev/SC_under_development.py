@@ -28,6 +28,7 @@ from datetime import datetime
 
 import numpy as np
 
+#%%
 
 # -*- coding: utf-8 -*-
 """
@@ -35,6 +36,50 @@ Created on Sun Jun 21 08:39:33 2020
 
 @author: Kevin
 """
+
+parish=pd.read_excel(cnf._INPUT_DIR +'\\CYC_parish_table.xlsx')
+parish.to_csv(cnf._INPUT_DIR +'\\CYC_parish_table.csv', index=False)
+
+parish=pd.read_csv(cnf._INPUT_DIR +'\\CYC_parish_table.csv')
+schools=pd.read_excel(cnf._INPUT_DIR +'\\CYC_school_table.xlsx')
+
+designation = pd.read_excel(cnf._INPUT_DIR +'\\CYC_school_table.xlsx', sheet_name=)
+Saint Michael School of Clayton
+
+# Get schools list for recent signups
+# do a global find/replace 
+#%% School standarization to match Pat Moore table
+
+def getCurrSchools()
+    renameDict={'Soulard':'The Soulard School/City Charter'
+                'Cabrini':'St. Frances Cabrini Academy'
+                'Cecilia':'St. Cecilia (St. Louis)'
+                'McKinley':'McKinley CLA Middel/City Magnet'
+                'Lafayette':'Lafayette}
+    raw_schools = players.School.unique().tolist()
+    for rs in raw_schools:
+        rs=rs.replace(',','').replace('.')
+
+def getCityPublic(schools, currSchool, myZip):
+    ''' Find an approved city public school name matching players zip code
+    myZip=63116
+    '''
+    schools=schools.rename(columns={'School Designation':'Designation','Parish per Parish Finder':'Parish'})
+    slps = schools[schools['Designation']=='City Public']
+    magnet=schools[schools['Designation']=='City Magnet']
+    if myZip in slps.Zip.unique():
+        return random.choice(slps[slps['Zip']==myZip]['Name'].tolist())
+    elif myZip in magnet.Zip.unique():
+        return random.choice(magnet[magnet['Zip']==myZip]['Name'].tolist())
+    else:
+        print('No matching school in zip code {}'.format(myZip))
+        return currSchool
+    
+def findSLPS(myZip, ):
+    '''  If listed generic SLPS, random assign to St. Louis Public based on home zip 
+    code, 
+    
+    '''
 
 #%% New pygsheets method of finding/processing new signups 
 
@@ -55,13 +100,19 @@ def assignGsignupKey(numkeys):
 def processNewGsignups(myPygSheet, newrownums):
     '''
     '''
+    
+    
+myPygSheet=downloadSignups(sheetID)
 
-def downloadSignups(sheetID, rangeName):
-    ''' Download all from current season's signups
+#%%
+def downloadSignups(sheetID):
+    ''' Download all from current season's signups and adds Gkey to remote sheet
     Using pygsheets version w/ assigned Gkey.. original forms only gets addition
-    of Gkey and Processed cols (no rename of others)
+    of Gkey and cols for plakey/ famkey
     processed signups w/ Plakey/Famkey in separate sheet
     
+    args:
+        sheetID - signup google sheet ID 
     pygsheets short tutorial
     https://medium.com/game-of-data/play-with-google-spreadsheets-with-python-301dd4ee36eb
     
@@ -71,6 +122,17 @@ def downloadSignups(sheetID, rangeName):
     sh = gc.open_by_key(sheetID)
     myPygSheet=sh[0]
     mycols=myPygSheet.get_row(1)
+
+    def findMax(vals):
+        maxKey=0
+        for val in vals:
+            try:
+                if int(val)>maxKey:
+                    maxKey=int(val)
+            except:
+                pass
+        return maxKey
+
     # Can't necessarily count on rows not getting renumbered or resorted
     if 'Gkey' not in mycols: # Initialize spreadsheet key (Gkey)
         myPygSheet.add_cols(2) # auto adds to gsheet
@@ -83,28 +145,29 @@ def downloadSignups(sheetID, rangeName):
         gkeyvals.extend([str(i) for i in range(2, len(occRows)+1)])
         # add Gkeys to this newly-added column
         myPygSheet.update_col(len(mycols)+1,gkeyvals)
-        myPygSheet.update_col(len(mycols)+2,['Processed') # col to track processing status
-    
+        # myPygSheet.update_col(len(mycols)+2,['Processed') # col to track processing status
     else:
-        
         # Find rows w/ occupied timestamp entry
         tstampRows = [i+1 for i,val in enumerate(myPygSheet.get_col(1)) if val !='']
-        # get column w/ Gkeys
-        gkeys=myPygSheet.get_col(mycols.index('Gkey'))
-        keyRows = [i+1 for i,val in enumerate(gkeys) if val !='']
-        newrownums=[i for i in tstampRows if i not in keyRows]
-        for i, nr in enumerate(newrownums):
-            if nr > max(gkeys):
-                
-            
-        if len(newrownums)>0:
+        # Get column w/ Gkeys (and terminate at length of timestamps)
+        gkeys=myPygSheet.get_col(mycols.index('Gkey')+1)[:len(tstampRows)]
+        blankInds= [i for i,val in enumerate(gkeys) if val =='']
+        startKey=findMax(gkeys)+1
+        for i, bl in enumerate(blankInds):
+            gkeys[bl]=str(startKey+i)
+        # Write back to column 
+        myPygSheet.update_col(mycols.index('Gkey')+1, gkeys)            
+    # Gkey and Processed cols already present
+    headers = changeColNames(mycols)        
+    gsignups=pd.DataFrame(myPygSheet.get_all_records()[1:], columns=headers)
 
-            
-        # Gkey and Processed cols already present
-        headers = changeColNames(mycols)        
-        gsignups=pd.DataFrame(myPygSheet.get_all_records()[1:], columns=headers)
-        newSus=gsignups[gsignups['Processed']==''] # null strings in gsheet 
-            
+    sh = gc.open_by_key(sheetID)
+    myPygSheet=sh[0]
+    return myPygSheet
+#%%
+    gsignups = myPygSheet.get_as_df()
+    mycols=myPygSheet.get_row(1)
+    
             
 
     creds = getGoogleCreds() # google.oauth2.credentials

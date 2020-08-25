@@ -190,14 +190,13 @@ def changeColNames(headers):
                 newNames.append(rename_close.get(matchkey))
         else: # not found in any rename dicts so just keep
             newNames.append(val)
-    unchanged=['Timestamp','Gender','Sport','Plakey','Famkey']
+    unchanged=['Timestamp','Gender','Sport','Gkey','Plakey','Famkey']
     # check for invalid header names
     validNames=list(renameDict.values()) + unchanged
     badNames=[i for i in newNames if i not in validNames]
     if len(badNames)>0:
         print('Invalid column names:',', '.join(badNames))
     return newNames
-
     
 def downloadSignups(sheetID, rangeName):
     ''' Download all from current season's signups
@@ -223,7 +222,7 @@ def downloadSignups(sheetID, rangeName):
             newEntry[headers[i]]= val
         newValList.append(newEntry)
     signups=pd.DataFrame(newValList, columns=headers)            
-    return signups    
+    return signups
 
 def downloadSheet(sheetID, rangeName):
     ''' Generic google sheets download
